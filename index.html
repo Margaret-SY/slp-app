@@ -598,6 +598,28 @@ select.inp{-webkit-appearance:none;appearance:none;
   #printArea{display:block!important}
   @page{size:A4;margin:14mm 12mm}
 }
+/* ============ AI 润色 / 协写 ============ */
+.aibtn{margin-left:8px;padding:2px 9px;border:1.5px solid var(--brand);border-radius:14px;background:#fff;color:var(--brand);font-size:11.5px;font-weight:700;line-height:1.6;cursor:pointer;vertical-align:middle;min-height:0}
+.aibtn:hover{background:var(--brand);color:#fff}
+.ai-ctx{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-size:12px;color:#475569;white-space:pre-wrap;line-height:1.6;margin-bottom:10px}
+.ai-tpl{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.ai-chip{padding:6px 11px;border-radius:18px;border:1.5px solid var(--border-s);background:#fff;color:var(--muted);font-size:12.5px;font-weight:650;min-height:36px}
+.ai-chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.ai-lab{display:block;font-size:13px;font-weight:700;color:#475569;margin:4px 0 6px}
+.ai-chat{max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:10px;margin:10px 0;background:#fcfcfd}
+.ai-msg{font-size:13.5px;line-height:1.65;margin-bottom:10px;white-space:pre-wrap;word-break:break-word}
+.ai-msg.u{color:#0f766e}
+.ai-msg.a{color:#1e293b}
+.ai-msg:last-child{margin-bottom:0}
+.ai-draft{margin-top:4px}
+.ai-draft-h{font-size:12px;font-weight:700;color:var(--danger);margin:6px 0 5px}
+.ai-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.ai-actions .btn{flex:1;min-width:92px}
+.ai-set{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:11px;margin-bottom:10px}
+.ai-set label{font-size:12.5px;font-weight:700;color:#475569;display:block;margin:8px 0 5px}
+.ai-set label:first-child{margin-top:0}
+.ai-setmsg{font-size:12px;color:var(--brand);margin-left:8px;font-weight:600}
+@media(max-width:600px){ .ai-actions .btn{flex:1 1 100%} }
 </style>
 </head>
 <body>
@@ -2208,7 +2230,7 @@ function openEndCourse(id){
       '<button type="button" data-v="archived" onclick="segPick(this)">已结束 / 归档</button>'+
     '</div><div class="hint">「待重新排队」＝家长还想继续，进入排队列表等空位；「已结束」＝正式结案，档案收起不再显示在活跃列表。</div></div>';
 
-  body += '<div class="fg"><label>疗程小结（存入档案，方便日后回顾）</label>'+
+  body += '<div class="fg"><label>疗程小结（存入档案，方便日后回顾）'+aiBtnHTML('疗程小结',k.id)+'</label>'+
     '<textarea class="inp" id="ecNote" rows="3" placeholder="例：三词句表达稳定，主动提要求频率明显提升。建议下疗程进入短句叙事。"></textarea></div>';
 
   showMo('结束疗程 — '+esc(k.name), body,
@@ -2340,7 +2362,7 @@ function openBookForm(id, presetDate){
           return '<option value="'+s+'"'+(b&&b.source===s?' selected':'')+'>'+s+'</option>';
         }).join('')+
       '</select></div></div>';
-  h+='<div class="fg"><label>电话沟通备注</label>'+
+  h+='<div class="fg"><label>电话沟通备注'+aiBtnHTML('电话沟通备注','')+'</label>'+
     '<textarea class="inp" id="bkNote" rows="3" placeholder="家长反馈的核心问题、陪同人、注意事项……">'+(b?esc(b.note):'')+'</textarea>'+
     '<div class="hint">孩子到了建档时，这段备注会自动带进档案「简况」，不用再问一遍家长</div></div>';
   showMo(b?'编辑预约 — '+esc(b.name):'新建预约登记', h,
@@ -2645,7 +2667,7 @@ function openKidForm(id, preset){
       '<button type="button" class="btn" onclick="addCustomTag()">新增类型</button></div>'+
     '<div class="hint">自定义的类型会保存到类型库，以后给其他孩子建档也能直接勾选；点类型上的「×」可将其从类型库移除（已用的孩子档案保留该标签）。</div></div>';
 
-  b+='<div class="fg"><label>简况描述</label>'+
+  b+='<div class="fg"><label>简况描述'+aiBtnHTML('简况描述',gKid)+'</label>'+
     '<textarea class="inp" id="kBrief" rows="4" placeholder="当前核心问题、性格特点、注意事项、家庭配合度……">'+esc(k?k.brief:(pre.brief||''))+'</textarea></div>';
 
   if(!k){
@@ -2999,13 +3021,13 @@ function entryBlock(id,idx){
         ? '<div class="fg"><label>'+(e.status==='leave'?'请假原因':'旷课备注')+'</label>'+
           '<input class="inp" value="'+esc(e.reason)+'" oninput="_sf.entries[\''+id+'\'].reason=this.value" placeholder="如：感冒发烧、临时出差、未提前告知">'+
           '<div class="hint">'+(e.status==='leave'?'请假默认不消耗课时':'旷课不消耗课时，如需扣课请在档案里手动调整累计购买课时')+'</div></div>'
-        : '<div class="fg"><label>本节课内容</label>'+
+        : '<div class="fg"><label>本节课内容'+aiBtnHTML('本节课内容',id)+'</label>'+
             '<textarea class="inp" rows="2" oninput="_sf.entries[\''+id+'\'].content=this.value" placeholder="训练目标、使用教具、活动流程……">'+esc(e.content)+'</textarea></div>'+
-          '<div class="fg"><label>孩子表现</label>'+
+          '<div class="fg"><label>孩子表现'+aiBtnHTML('孩子表现',id)+'</label>'+
             '<textarea class="inp" rows="2" oninput="_sf.entries[\''+id+'\'].perf=this.value" placeholder="正确率、注意力时长、情绪状态、需辅助的环节……">'+esc(e.perf)+'</textarea></div>'+
-          '<div class="fg"><label>家庭作业</label>'+
+          '<div class="fg"><label>家庭作业'+aiBtnHTML('家庭作业',id)+'</label>'+
             '<textarea class="inp" rows="2" oninput="_sf.entries[\''+id+'\'].hw=this.value" placeholder="给家长的具体练习任务与频次">'+esc(e.hw)+'</textarea></div>'+
-          '<div class="fg"><label>下一步计划'+
+          '<div class="fg"><label>下一步计划'+aiBtnHTML('下一步计划',id)+
             (curPlan?'<span style="font-weight:600;color:var(--faint);font-size:12px">（当前：'+esc(curPlan.stage)+'）</span>':'<span style="font-weight:600;color:var(--faint);font-size:12px">（暂无进行中的计划）</span>')+
             '</label>'+
             '<textarea class="inp" rows="2" oninput="_sf.entries[\''+id+'\'].nextPlan=this.value" placeholder="下节课打算做什么 / 阶段目标是否调整">'+esc(e.nextPlan)+'</textarea>'+
@@ -3152,7 +3174,7 @@ function openPlanForm(pid, kidId){
     '</select></div>';
   b+='<div class="fg"><label>阶段名称 <span class="req">*</span></label>'+
     '<input class="inp" id="plStage" value="'+esc(p?p.stage:'')+'" placeholder="如：阶段二：三词句表达"></div>';
-  b+='<div class="fg"><label>阶段目标</label>'+
+  b+='<div class="fg"><label>阶段目标'+aiBtnHTML('阶段目标',gKid)+'</label>'+
     '<textarea class="inp" id="plGoal" rows="4" placeholder="可量化的目标，如：自发三词句每节课不少于 5 次">'+esc(p?p.goal:'')+'</textarea></div>';
   b+='<div class="fg"><label>状态</label><div class="segm" id="plStatus">'+
     '<button type="button" class="'+(!p||p.status==='active'?'on':'')+'" data-v="active" onclick="segPick(this)">进行中</button>'+
@@ -3898,7 +3920,7 @@ function drawAssessForm(){
     return '<label class="'+(on?'on':'')+'"><input type="checkbox" '+(on?'checked':'')+' data-at="'+t+'" onchange="toggleAssessType(this)">'+t+'</label>';
   }).join('');
   b+='</div><div class="hint">系统已按孩子档案标签预选。没建档或想多测一项，自己勾选。</div></div>';
-  b+='<div class="fg" style="margin-top:4px"><label>评估整体备注（可选）</label><textarea class="inp" rows="2" id="afNote" placeholder="第一节课整体印象、亲子关系、特别要注意的点……">'+esc(_af.note||'')+'</textarea></div>';
+  b+='<div class="fg" style="margin-top:4px"><label>评估整体备注（可选）'+aiBtnHTML('评估备注',_af.kidId)+'</label><textarea class="inp" rows="2" id="afNote" placeholder="第一节课整体印象、亲子关系、特别要注意的点……">'+esc(_af.note||'')+'</textarea></div>';
   b+='<div class="ass-probe-wrap"><div id="aProbes">'+drawAssessProbes()+'</div></div>';
   b+='<div class="ass-iep"'+( _af.types.length?'':' style="opacity:.5;pointer-events:none"')+'>'+
      '<div class="ass-iep-h"><strong>优劣势 &amp; IEP（自动生成，可改）</strong>'+
@@ -3987,11 +4009,11 @@ function drawAssessResult(){
        (sum.weak.length? sum.weak.map(function(s){ return '<div class="ass-srow">'+esc(s.probe)+'<span class="faint">'+esc(s.dom)+'</span></div>'; }).join('') : '<div class="mini-note">把对应探针评为「弱项」即出现在这里。</div>')+
      '</div></div>';
   h+='<div class="ass-iep-edit">'+
-     '<div class="fg"><label>长期目标（每行一条，来自待提升领域的长期目标）</label><textarea class="inp" rows="3" id="iepLG" placeholder="每行一条">'+esc((iep.longGoals||[]).join('\n'))+'</textarea></div>'+
-     '<div class="fg"><label>短期目标 SMART（来自待提升探针）</label><textarea class="inp" rows="4" id="iepSG" placeholder="每行一条">'+esc((iep.shortGoals||[]).join('\n'))+'</textarea></div>'+
-     '<div class="fg"><label>教学策略（来自待提升领域）</label><textarea class="inp" rows="3" id="iepST" placeholder="每行一条">'+esc((iep.strategies||[]).join('\n'))+'</textarea></div>'+
-     '<div class="fg"><label>家庭作业（来自待提升探针）</label><textarea class="inp" rows="3" id="iepHW" placeholder="每行一条">'+esc((iep.homework||[]).join('\n'))+'</textarea></div>'+
-     '<div class="fg"><label>评量标准</label><textarea class="inp" rows="2" id="iepMS">'+esc(iep.measure||'')+'</textarea></div>'+
+     '<div class="fg"><label>长期目标（每行一条，来自待提升领域的长期目标）'+aiBtnHTML('IEP长期目标',_af.kidId||gKid)+'</label><textarea class="inp" rows="3" id="iepLG" placeholder="每行一条">'+esc((iep.longGoals||[]).join('\n'))+'</textarea></div>'+
+     '<div class="fg"><label>短期目标 SMART（来自待提升探针）'+aiBtnHTML('IEP短期目标',_af.kidId||gKid)+'</label><textarea class="inp" rows="4" id="iepSG" placeholder="每行一条">'+esc((iep.shortGoals||[]).join('\n'))+'</textarea></div>'+
+     '<div class="fg"><label>教学策略（来自待提升领域）'+aiBtnHTML('IEP教学策略',_af.kidId||gKid)+'</label><textarea class="inp" rows="3" id="iepST" placeholder="每行一条">'+esc((iep.strategies||[]).join('\n'))+'</textarea></div>'+
+     '<div class="fg"><label>家庭作业（来自待提升探针）'+aiBtnHTML('IEP家庭作业',_af.kidId||gKid)+'</label><textarea class="inp" rows="3" id="iepHW" placeholder="每行一条">'+esc((iep.homework||[]).join('\n'))+'</textarea></div>'+
+     '<div class="fg"><label>评量标准'+aiBtnHTML('IEP评量标准',_af.kidId||gKid)+'</label><textarea class="inp" rows="2" id="iepMS">'+esc(iep.measure||'')+'</textarea></div>'+
      '</div>';
   return h;
 }
@@ -4672,6 +4694,169 @@ boot();
     });
   }catch(e){}
 })();
+/* ============ AI 润色 / 协写（DeepSeek 代理，仅本机存key） ============ */
+var AI_KEY='wb_slp_aikey', AI_MODEL='wb_slp_aimodel', AI_DESEN='wb_slp_aidesen';
+var aiState={taEl:null, kind:'', kidId:'', history:[], mode:'expand', busy:false};
+var AI_TPLS={
+  expand:'请把下面的临床笔记扩写、润色为通顺专业的描述，保留全部事实，不要编造未提及的信息。',
+  soap:'请把下面的内容整理为 SOAP 格式（S 主观 / O 客观 / A 评估 / P 计划），专业但易懂。',
+  advice:'基于下面的上课情况，给出下一步治疗建议（目标、策略、家庭延伸），具体可操作。',
+  parent:'把下面的专业内容改写成家长容易理解的语言，用于家庭指导，语气温和、鼓励、去术语。',
+  iep:'基于下面的优势与待提升，撰写可测量的 IEP 短期目标（SMART），每条一行。',
+  en:'把下面内容翻译成英文（临床专业表述）。'
+};
+var AI_TPL_LABELS={expand:'扩写润色',soap:'SOAP格式化',advice:'治疗建议',parent:'家长沟通版',iep:'IEP目标',en:'英文对照'};
+function aiBtnHTML(kind, kidId){
+  return ' <button type="button" class="aibtn" onclick="aiOpen(this,\''+kind+'\',\''+kidId+'\')">✨ AI</button>';
+}
+function aiGetKey(){ return localStorage.getItem(AI_KEY)||''; }
+function aiSetKey(v){ if(v){ localStorage.setItem(AI_KEY,v); } else { localStorage.removeItem(AI_KEY); } }
+function aiGetModel(){ return localStorage.getItem(AI_MODEL)||'deepseek-chat'; }
+function aiGetDesen(){ return localStorage.getItem(AI_DESEN)!=='0'; }
+function aiFindTA(btn){
+  var lab=btn.parentNode; var fg=lab?lab.parentNode:null;
+  if(fg && fg.querySelector){ var t=fg.querySelector('textarea'); if(t) return t; }
+  return null;
+}
+function aiOpen(btn, kind, kidId){
+  var ta=aiFindTA(btn); if(!ta){ toast('找不到目标文本框','err'); return; }
+  aiState.taEl=ta; aiState.kind=kind||'内容'; aiState.kidId=kidId||''; aiState.history=[]; aiState.mode='expand';
+  document.getElementById('aiTitle').textContent='✨ AI 润色 · '+aiState.kind;
+  document.getElementById('aiInstr').value='';
+  document.getElementById('aiChat').innerHTML='';
+  document.getElementById('aiDraftWrap').style.display='none';
+  document.getElementById('aiDraft').value='';
+  renderAITpl(); renderAICtx(); renderAISettings();
+  document.getElementById('aiMo').classList.add('on');
+}
+function closeAIMo(){ document.getElementById('aiMo').classList.remove('on'); }
+function renderAITpl(){
+  var box=document.getElementById('aiTpl'); var html='';
+  for(var k in AI_TPLS){ html+='<button type="button" class="ai-chip" data-mode="'+k+'" onclick="aiPickTpl(\''+k+'\')">'+AI_TPL_LABELS[k]+'</button>'; }
+  box.innerHTML=html;
+}
+function aiPickTpl(m){
+  aiState.mode=m;
+  var chips=document.getElementById('aiTpl').querySelectorAll('.ai-chip');
+  for(var i=0;i<chips.length;i++){ chips[i].className='ai-chip'+((chips[i].getAttribute('data-mode')===m)?' on':''); }
+  var ins=document.getElementById('aiInstr'); var tpl=AI_TPLS[m];
+  if(!ins.value){ ins.value=tpl; } else if(ins.value.indexOf(tpl)<0){ ins.value=tpl+'\n'+ins.value; }
+}
+function aiBuildCtx(kidId){
+  var k=kidById(kidId); if(!k) return '';
+  var age=ageOf(k.birth); var tags=(k.tags||[]).join('、');
+  return '【儿童档案】姓名：'+k.name+'，'+age+'，'+(k.gender||'')+'。\n标签/诊断：'+tags+'。\n概况：'+(k.brief||'（无）');
+}
+function renderAICtx(){ var c=aiBuildCtx(aiState.kidId); document.getElementById('aiCtx').textContent=c?c:'（未关联儿童档案，可在档案里补全后获得更精准的建议）'; }
+function renderAISettings(){
+  var key=aiGetKey(); var model=aiGetModel(); var desen=aiGetDesen();
+  var html='<label>DeepSeek API Key（仅存本机浏览器，不上传服务器）</label>'+
+    '<input class="inp" id="aiKey" type="password" placeholder="sk-..." value="'+esc(key)+'">'+
+    '<label>模型</label><select class="inp" id="aiModel">'+
+    '<option value="deepseek-chat"'+(model==='deepseek-chat'?' selected':'')+'>deepseek-chat（默认）</option>'+
+    '<option value="deepseek-reasoner"'+(model==='deepseek-reasoner'?' selected':'')+'>deepseek-reasoner（推理更强）</option>'+
+    '</select>'+
+    '<label class="ckline"><input type="checkbox" id="aiDesen" '+(desen?'checked':'')+'> 发送前脱敏（儿童真名自动替换为 [儿童]）</label>'+
+    '<div style="margin-top:8px"><button type="button" class="btn sm" onclick="aiSaveSet()">保存设置</button>'+
+    '<button type="button" class="btn sm ghost" onclick="aiTest()">测试连接</button>'+
+    '<span id="aiSetMsg" class="ai-setmsg"></span></div>';
+  document.getElementById('aiSetBox').innerHTML=html;
+}
+function aiSaveSet(){
+  var k=document.getElementById('aiKey').value.trim(); aiSetKey(k);
+  localStorage.setItem(AI_MODEL, document.getElementById('aiModel').value);
+  localStorage.setItem(AI_DESEN, document.getElementById('aiDesen').checked?'1':'0');
+  var m=document.getElementById('aiSetMsg'); if(m) m.textContent='已保存';
+}
+function aiTest(){
+  aiSaveSet();
+  aiRawCall([{role:'system',content:'你是测试助手。'},{role:'user',content:'只回复 OK 两个字'}], function(ok,txt){
+    var m=document.getElementById('aiSetMsg'); if(!m) return;
+    m.textContent= ok? ('连接成功：'+txt.slice(0,16)) : ('失败：'+txt.slice(0,40));
+  });
+}
+function aiSend(){
+  if(aiState.busy) return;
+  var key=aiGetKey(); if(!key){ toast('请先在设置里填写 DeepSeek API Key','err'); return; }
+  if(!aiState.taEl){ toast('找不到目标文本框','err'); return; }
+  var src=aiState.taEl.value||'';
+  var instr=document.getElementById('aiInstr').value.trim();
+  var tpl=AI_TPLS[aiState.mode]||'';
+  var userText='【任务】'+(tpl||'请扩写润色下面的内容。')+'\n【补充要求】'+(instr||'（无）')+'\n【原始内容】\n'+(src||'（空，请根据上下文给建议）');
+  var sys='你是资深言语语言治疗师（SLP）的临床文书助理。把治疗师提供的简短中文临床笔记，扩写、润色为专业、结构化、符合临床规范的治疗记录。规则：1) 严格基于提供的信息，不编造未提及的事实或数据；2) 语言专业但不晦涩，适合写入病历/档案；3) 涉及具体儿童时用[儿童]代指，保护隐私；4) 信息不足时标注「（待补充）」而非杜撰；5) 默认输出中文（除非要求英文）。';
+  var msgs=[{role:'system',content:sys}];
+  var ctx=aiBuildCtx(aiState.kidId); if(ctx) msgs.push({role:'system',content:ctx});
+  for(var i=0;i<aiState.history.length;i++){ msgs.push(aiState.history[i]); }
+  var sendText=userText;
+  if(aiGetDesen() && aiState.kidId){ var k=kidById(aiState.kidId); if(k&&k.name){ sendText=userText.split(k.name).join('[儿童]'); } }
+  msgs.push({role:'user',content:sendText});
+  aiState.busy=true; setAISend(true);
+  aiRawCall(msgs, function(ok,txt){
+    aiState.busy=false; setAISend(false);
+    if(!ok){ appendAIChat('a','⚠️ '+txt); return; }
+    aiState.history.push({role:'user',content:sendText});
+    aiState.history.push({role:'assistant',content:txt});
+    appendAIChat('a', txt);
+    document.getElementById('aiDraftWrap').style.display='block';
+    document.getElementById('aiDraft').value=txt;
+  });
+}
+function aiRawCall(messages, cb){
+  var key=aiGetKey(); var model=aiGetModel();
+  var body=JSON.stringify({provider:'deepseek', apiKey:key, model:model, messages:messages});
+  fetch('/api/ai', {method:'POST', headers:{'Content-Type':'application/json'}, body:body})
+    .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, data:j}; }); })
+    .then(function(res){
+      if(!res.ok){ cb(false, (res.data&&res.data.error)||('HTTP '+res.status)); return; }
+      var c=res.data&&res.data.content; if(!c){ cb(false,'返回内容为空'); return; }
+      cb(true, c);
+    })
+    .catch(function(e){ cb(false, '网络错误：'+((e&&e.message)?e.message:e)); });
+}
+function appendAIChat(role, text){
+  var box=document.getElementById('aiChat'); if(!box) return;
+  var div=document.createElement('div'); div.className='ai-msg '+(role==='u'?'u':'a');
+  div.textContent=(role==='u'?'你：':'AI：')+text;
+  box.appendChild(div); box.scrollTop=box.scrollHeight;
+}
+function setAISend(b){ var b1=document.getElementById('aiSendBtn'); if(!b1) return; b1.disabled=b; b1.textContent=b?'生成中…':'生成 / 继续讨论'; }
+function aiAdopt(keep){
+  if(!aiState.taEl) return;
+  aiState.taEl.value=document.getElementById('aiDraft').value;
+  if(aiState.taEl.dispatchEvent){ try{ aiState.taEl.dispatchEvent(new Event('input')); }catch(e){} }
+  if(!keep){ closeAIMo(); }
+  toast(keep?'已写入，可继续讨论':'已采纳并写入'+aiState.kind, 'ok');
+}
+function aiAdoptKeep(){ aiAdopt(true); }
+function aiDiscard(){ document.getElementById('aiDraftWrap').style.display='none'; document.getElementById('aiDraft').value=''; }
+
 </script>
+<div id="aiMo" class="ov">
+  <div class="mo wide">
+    <div class="mo-h"><h3 id="aiTitle">✨ AI 润色</h3>
+      <button class="mo-x" type="button" onclick="closeAIMo()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mo-b">
+      <div class="ai-set" id="aiSetBox"></div>
+      <div class="ai-ctx" id="aiCtx"></div>
+      <div class="ai-tpl" id="aiTpl"></div>
+      <label class="ai-lab">你的要求（可空，默认按所选模板扩写润色）</label>
+      <textarea id="aiInstr" class="inp" rows="2" placeholder="例如：再加一点情绪行为观察，语气温柔专业"></textarea>
+      <div class="ai-chat" id="aiChat"></div>
+      <div class="ai-draft" id="aiDraftWrap" style="display:none">
+        <div class="ai-draft-h">AI 草稿 · 待审核（请核对事实后再采纳，AI 不会自动写入）</div>
+        <textarea id="aiDraft" class="inp" rows="6"></textarea>
+        <div class="ai-actions">
+          <button class="btn pri" type="button" onclick="aiAdopt(false)">采纳并写入</button>
+          <button class="btn" type="button" onclick="aiAdopt(true)">采纳并继续讨论</button>
+          <button class="btn ghost" type="button" onclick="aiDiscard()">放弃</button>
+        </div>
+      </div>
+    </div>
+    <div class="mo-f">
+      <button class="btn" type="button" onclick="closeAIMo()">关闭</button>
+      <button class="btn pri" type="button" id="aiSendBtn" onclick="aiSend()">生成 / 继续讨论</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
