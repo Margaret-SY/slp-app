@@ -40,12 +40,10 @@ export async function onRequest(context) {
 
   // 目前只接 DeepSeek（OpenAI 兼容）。以后可在此扩展其它厂商。
   var upstream = 'https://api.deepseek.com/chat/completions';
-  var upstreamBody = JSON.stringify({
-    model: model,
-    messages: messages,
-    temperature: 0.7,
-    stream: false
-  });
+  var bodyObj = { model: model, messages: messages, stream: false };
+  // deepseek-reasoner 不支持 temperature，传了会 400，故仅 chat 模型带该参数
+  if (model !== 'deepseek-reasoner') { bodyObj.temperature = 0.7; }
+  var upstreamBody = JSON.stringify(bodyObj);
 
   try {
     var resp = await fetch(upstream, {
