@@ -3304,9 +3304,11 @@ function reloadFromStorage(){
 function bufToB64(buf){
   var bytes=new Uint8Array(buf), s='';
   for(var i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]);
-  return btoa(s);
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
 function b64ToBuf(b64){
+  b64=b64.replace(/-/g,'+').replace(/_/g,'/');
+  while(b64.length%4) b64+='=';
   var s=atob(b64), bytes=new Uint8Array(s.length);
   for(var i=0;i<s.length;i++) bytes[i]=s.charCodeAt(i);
   return bytes.buffer;
@@ -3449,8 +3451,12 @@ function syncDownload(){
       return f? (f.content||'') : '';
     });
   }).then(function(payload){
+    payload = (payload||'').trim();
     if(!payload){ toast('云端还没有数据，请先在另一台上传','warn'); return; }
-    payload = (' '+payload).replace(/\s+$/,'').slice(1);
+    if(!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(payload)){
+      end(false, '云端返回的不是有效加密数据（请确认打开的是 slp-app-git.pages.dev，且另一台已上传）');
+      return;
+    }
     return syDecrypt(payload, SYNC.pass).then(function(text){
       var data=JSON.parse(text);
       for(var k in data){ if(data.hasOwnProperty(k)) localStorage.setItem(k, data[k]); }
