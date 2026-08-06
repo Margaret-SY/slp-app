@@ -1,7 +1,7 @@
 // 言语治疗工作台 — AI 润色代理（Cloudflare Pages Functions）
 // 文件路径：functions/api/ai.js
 // 浏览器把 {provider, apiKey, model, messages} POST 到这里，
-// 函数转发到 DeepSeek（OpenAI 兼容），解决浏览器跨域(CORS)问题。
+// 函数转发到 DeepSeek 或 硅基流动 SiliconFlow（均 OpenAI 兼容），解决浏览器跨域(CORS)问题。
 // 说明：apiKey 由用户在本机浏览器填写，经 https 传到本函数再转发，函数本身不存储密钥。
 
 export async function onRequest(context) {
@@ -28,7 +28,7 @@ export async function onRequest(context) {
 
   var provider = body.provider || 'deepseek';
   var apiKey = body.apiKey || '';
-  var model = body.model || 'deepseek-chat';
+  var model = body.model || (provider === 'siliconflow' ? 'deepseek-ai/DeepSeek-V3' : 'deepseek-chat');
   var messages = body.messages || [];
 
   if (!apiKey) {
@@ -38,11 +38,19 @@ export async function onRequest(context) {
     return new Response(JSON.stringify({ error: 'messages 为空' }), { status: 400, headers: cors });
   }
 
-  // 目前只接 DeepSeek（OpenAI 兼容）。以后可在此扩展其它厂商。
-  var upstream = 'https://api.deepseek.com/chat/completions';
+  // 按服务商选择上游；均为 OpenAI 兼容接口。
+  var upstream;
+  var tempAllowed;
+  if (provider === 'siliconflow') {
+    upstream = 'https://api.siliconflow.cn/v1/chat/completions';
+    tempAllowed = true;
+  } else {
+    upstream = 'https://api.deepseek.com/chat/completions';
+    // deepseek-reasoner 不支持 temperature，传了会 400，故仅 chat 模型带该参数
+    tempAllowed = (model !== 'deepseek-reasoner');
+  }
   var bodyObj = { model: model, messages: messages, stream: false };
-  // deepseek-reasoner 不支持 temperature，传了会 400，故仅 chat 模型带该参数
-  if (model !== 'deepseek-reasoner') { bodyObj.temperature = 0.7; }
+  if (tempAllowed) { bodyObj.temperature = 0.7; }
   var upstreamBody = JSON.stringify(bodyObj);
 
   try {
