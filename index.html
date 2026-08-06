@@ -2667,7 +2667,7 @@ function openKidForm(id, preset){
       '<button type="button" class="btn" onclick="addCustomTag()">新增类型</button></div>'+
     '<div class="hint">自定义的类型会保存到类型库，以后给其他孩子建档也能直接勾选；点类型上的「×」可将其从类型库移除（已用的孩子档案保留该标签）。</div></div>';
 
-  b+='<div class="fg"><label>简况描述'+aiBtnHTML('简况描述',gKid)+'</label>'+
+  b+='<div class="fg"><label>简况描述'+aiBtnHTML('简况描述', k?k.id:'')+'</label>'+
     '<textarea class="inp" id="kBrief" rows="4" placeholder="当前核心问题、性格特点、注意事项、家庭配合度……">'+esc(k?k.brief:(pre.brief||''))+'</textarea></div>';
 
   if(!k){
@@ -3174,7 +3174,7 @@ function openPlanForm(pid, kidId){
     '</select></div>';
   b+='<div class="fg"><label>阶段名称 <span class="req">*</span></label>'+
     '<input class="inp" id="plStage" value="'+esc(p?p.stage:'')+'" placeholder="如：阶段二：三词句表达"></div>';
-  b+='<div class="fg"><label>阶段目标'+aiBtnHTML('阶段目标',gKid)+'</label>'+
+  b+='<div class="fg"><label>阶段目标'+aiBtnHTML('阶段目标', p?p.kidId:(kidId||''))+'</label>'+
     '<textarea class="inp" id="plGoal" rows="4" placeholder="可量化的目标，如：自发三词句每节课不少于 5 次">'+esc(p?p.goal:'')+'</textarea></div>';
   b+='<div class="fg"><label>状态</label><div class="segm" id="plStatus">'+
     '<button type="button" class="'+(!p||p.status==='active'?'on':'')+'" data-v="active" onclick="segPick(this)">进行中</button>'+
@@ -4009,11 +4009,11 @@ function drawAssessResult(){
        (sum.weak.length? sum.weak.map(function(s){ return '<div class="ass-srow">'+esc(s.probe)+'<span class="faint">'+esc(s.dom)+'</span></div>'; }).join('') : '<div class="mini-note">把对应探针评为「弱项」即出现在这里。</div>')+
      '</div></div>';
   h+='<div class="ass-iep-edit">'+
-     '<div class="fg"><label>长期目标（每行一条，来自待提升领域的长期目标）'+aiBtnHTML('IEP长期目标',_af.kidId||gKid)+'</label><textarea class="inp" rows="3" id="iepLG" placeholder="每行一条">'+esc((iep.longGoals||[]).join('\n'))+'</textarea></div>'+
-     '<div class="fg"><label>短期目标 SMART（来自待提升探针）'+aiBtnHTML('IEP短期目标',_af.kidId||gKid)+'</label><textarea class="inp" rows="4" id="iepSG" placeholder="每行一条">'+esc((iep.shortGoals||[]).join('\n'))+'</textarea></div>'+
-     '<div class="fg"><label>教学策略（来自待提升领域）'+aiBtnHTML('IEP教学策略',_af.kidId||gKid)+'</label><textarea class="inp" rows="3" id="iepST" placeholder="每行一条">'+esc((iep.strategies||[]).join('\n'))+'</textarea></div>'+
-     '<div class="fg"><label>家庭作业（来自待提升探针）'+aiBtnHTML('IEP家庭作业',_af.kidId||gKid)+'</label><textarea class="inp" rows="3" id="iepHW" placeholder="每行一条">'+esc((iep.homework||[]).join('\n'))+'</textarea></div>'+
-     '<div class="fg"><label>评量标准'+aiBtnHTML('IEP评量标准',_af.kidId||gKid)+'</label><textarea class="inp" rows="2" id="iepMS">'+esc(iep.measure||'')+'</textarea></div>'+
+     '<div class="fg"><label>长期目标（每行一条，来自待提升领域的长期目标）'+aiBtnHTML('IEP长期目标',_af.kidId||'')+'</label><textarea class="inp" rows="3" id="iepLG" placeholder="每行一条">'+esc((iep.longGoals||[]).join('\n'))+'</textarea></div>'+
+     '<div class="fg"><label>短期目标 SMART（来自待提升探针）'+aiBtnHTML('IEP短期目标',_af.kidId||'')+'</label><textarea class="inp" rows="4" id="iepSG" placeholder="每行一条">'+esc((iep.shortGoals||[]).join('\n'))+'</textarea></div>'+
+     '<div class="fg"><label>教学策略（来自待提升领域）'+aiBtnHTML('IEP教学策略',_af.kidId||'')+'</label><textarea class="inp" rows="3" id="iepST" placeholder="每行一条">'+esc((iep.strategies||[]).join('\n'))+'</textarea></div>'+
+     '<div class="fg"><label>家庭作业（来自待提升探针）'+aiBtnHTML('IEP家庭作业',_af.kidId||'')+'</label><textarea class="inp" rows="3" id="iepHW" placeholder="每行一条">'+esc((iep.homework||[]).join('\n'))+'</textarea></div>'+
+     '<div class="fg"><label>评量标准'+aiBtnHTML('IEP评量标准',_af.kidId||'')+'</label><textarea class="inp" rows="2" id="iepMS">'+esc(iep.measure||'')+'</textarea></div>'+
      '</div>';
   return h;
 }
@@ -4695,7 +4695,7 @@ boot();
   }catch(e){}
 })();
 /* ============ AI 润色 / 协写（DeepSeek 代理，仅本机存key） ============ */
-var AI_KEY='wb_slp_aikey', AI_MODEL='wb_slp_aimodel', AI_DESEN='wb_slp_aidesen';
+var AI_KEY='wb_slp_aikey', AI_KEY_SF='wb_slp_aikey_sf', AI_MODEL='wb_slp_aimodel', AI_DESEN='wb_slp_aidesen', AI_PROV='wb_slp_aiprov';
 var aiState={taEl:null, kind:'', kidId:'', history:[], mode:'expand', busy:false};
 var AI_TPLS={
   expand:'请把下面的临床笔记扩写、润色为通顺专业的描述，保留全部事实，不要编造未提及的信息。',
@@ -4709,8 +4709,10 @@ var AI_TPL_LABELS={expand:'扩写润色',soap:'SOAP格式化',advice:'治疗建�
 function aiBtnHTML(kind, kidId){
   return ' <button type="button" class="aibtn" onclick="aiOpen(this,\''+kind+'\',\''+kidId+'\')">✨ AI</button>';
 }
-function aiGetKey(){ return localStorage.getItem(AI_KEY)||''; }
-function aiSetKey(v){ if(v){ localStorage.setItem(AI_KEY,v); } else { localStorage.removeItem(AI_KEY); } }
+function aiGetProv(){ return localStorage.getItem(AI_PROV)||'deepseek'; }
+function aiSetProv(v){ localStorage.setItem(AI_PROV, v); }
+function aiGetKey(){ var p=aiGetProv(); return localStorage.getItem(p==='siliconflow'?AI_KEY_SF:AI_KEY)||''; }
+function aiSetKey(v){ var p=aiGetProv(); if(v){ localStorage.setItem(p==='siliconflow'?AI_KEY_SF:AI_KEY, v); } else { localStorage.removeItem(p==='siliconflow'?AI_KEY_SF:AI_KEY); } }
 function aiGetModel(){ return localStorage.getItem(AI_MODEL)||'deepseek-chat'; }
 function aiGetDesen(){ return localStorage.getItem(AI_DESEN)!=='0'; }
 function aiFindTA(btn){
@@ -4749,21 +4751,36 @@ function aiBuildCtx(kidId){
 }
 function renderAICtx(){ var c=aiBuildCtx(aiState.kidId); document.getElementById('aiCtx').textContent=c?c:'（未关联儿童档案，可在档案里补全后获得更精准的建议）'; }
 function renderAISettings(){
-  var key=aiGetKey(); var model=aiGetModel(); var desen=aiGetDesen();
-  var html='<label>DeepSeek API Key（仅存本机浏览器，不上传服务器）</label>'+
-    '<input class="inp" id="aiKey" type="password" placeholder="sk-..." value="'+esc(key)+'">'+
-    '<label>模型</label><select class="inp" id="aiModel">'+
-    '<option value="deepseek-chat"'+(model==='deepseek-chat'?' selected':'')+'>deepseek-chat（默认）</option>'+
-    '<option value="deepseek-reasoner"'+(model==='deepseek-reasoner'?' selected':'')+'>deepseek-reasoner（推理更强）</option>'+
+  var prov=aiGetProv(); var key=aiGetKey(); var model=aiGetModel(); var desen=aiGetDesen();
+  var mopts = prov==='siliconflow'
+    ? '<option value="deepseek-ai/DeepSeek-V3"'+(model==='deepseek-ai/DeepSeek-V3'?' selected':'')+'>DeepSeek-V3（免费）</option>'+
+      '<option value="Qwen/Qwen2.5-7B-Instruct"'+(model==='Qwen/Qwen2.5-7B-Instruct'?' selected':'')+'>Qwen2.5-7B（免费）</option>'+
+      '<option value="THUDM/glm-4-9b-chat"'+(model==='THUDM/glm-4-9b-chat'?' selected':'')+'>GLM-4-9B（免费）</option>'
+    : '<option value="deepseek-chat"'+(model==='deepseek-chat'?' selected':'')+'>deepseek-chat（默认）</option>'+
+      '<option value="deepseek-reasoner"'+(model==='deepseek-reasoner'?' selected':'')+'>deepseek-reasoner（推理更强）</option>';
+  var keyLabel = prov==='siliconflow' ? '硅基流动 SiliconFlow API Key' : 'DeepSeek API Key';
+  var html='<label>服务商</label><select class="inp" id="aiProv" onchange="aiOnProv()">'+
+    '<option value="deepseek"'+(prov==='deepseek'?' selected':'')+'>DeepSeek（充值极便宜）</option>'+
+    '<option value="siliconflow"'+(prov==='siliconflow'?' selected':'')+'>硅基流动 SiliconFlow（新用户免费额度）</option>'+
     '</select>'+
+    '<label>'+keyLabel+'（仅存本机浏览器，不上传服务器）</label>'+
+    '<input class="inp" id="aiKey" type="password" placeholder="sk-..." value="'+esc(key)+'">'+
+    '<label>模型</label><select class="inp" id="aiModel">'+mopts+'</select>'+
     '<label class="ckline"><input type="checkbox" id="aiDesen" '+(desen?'checked':'')+'> 发送前脱敏（儿童真名自动替换为 [儿童]）</label>'+
     '<div style="margin-top:8px"><button type="button" class="btn sm" onclick="aiSaveSet()">保存设置</button>'+
     '<button type="button" class="btn sm ghost" onclick="aiTest()">测试连接</button>'+
     '<span id="aiSetMsg" class="ai-setmsg"></span></div>';
   document.getElementById('aiSetBox').innerHTML=html;
 }
+function aiOnProv(){
+  var p=document.getElementById('aiProv').value; aiSetProv(p);
+  localStorage.setItem(AI_MODEL, p==='siliconflow'?'deepseek-ai/DeepSeek-V3':'deepseek-chat');
+  renderAISettings();
+}
 function aiSaveSet(){
-  var k=document.getElementById('aiKey').value.trim(); aiSetKey(k);
+  var p=document.getElementById('aiProv').value; aiSetProv(p);
+  var k=document.getElementById('aiKey').value.trim();
+  localStorage.setItem(p==='siliconflow'?AI_KEY_SF:AI_KEY, k);
   localStorage.setItem(AI_MODEL, document.getElementById('aiModel').value);
   localStorage.setItem(AI_DESEN, document.getElementById('aiDesen').checked?'1':'0');
   var m=document.getElementById('aiSetMsg'); if(m) m.textContent='已保存';
@@ -4777,7 +4794,7 @@ function aiTest(){
 }
 function aiSend(){
   if(aiState.busy) return;
-  var key=aiGetKey(); if(!key){ toast('请先在设置里填写 DeepSeek API Key','err'); return; }
+  var key=aiGetKey(); if(!key){ toast('请先在设置里填写当前服务商的 API Key','err'); return; }
   if(!aiState.taEl){ toast('找不到目标文本框','err'); return; }
   var src=aiState.taEl.value||'';
   var instr=document.getElementById('aiInstr').value.trim();
@@ -4802,8 +4819,9 @@ function aiSend(){
   });
 }
 function aiRawCall(messages, cb){
-  var key=aiGetKey(); var model=aiGetModel();
-  var body=JSON.stringify({provider:'deepseek', apiKey:key, model:model, messages:messages});
+  var key=aiGetKey(); var model=aiGetModel(); var provider=aiGetProv();
+  if(!key){ cb(false,'请先在设置里填写当前服务商的 API Key'); return; }
+  var body=JSON.stringify({provider:provider, apiKey:key, model:model, messages:messages});
   fetch('/api/ai', {method:'POST', headers:{'Content-Type':'application/json'}, body:body})
     .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, data:j}; }); })
     .then(function(res){
