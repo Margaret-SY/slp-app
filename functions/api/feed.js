@@ -1,7 +1,7 @@
 // 言语治疗工作台 — 学习库热点订阅代理（Cloudflare Pages Functions）
 // 文件路径：functions/api/feed.js
-// 服务端抓取 Google News RSS(中文关键词) + ScienceDaily 兜底，返回统一 JSON。
-// 解决两件事：① 浏览器跨域(CORS) ② 国内网络无法直连 Google（函数在 Cloudflare 境外边缘执行，用户经 pages.dev 间接拿到）。
+// 服务端抓取 Bing News RSS(中文关键词) + Google News(兜底) + ScienceDaily(英文兜底)。
+// 解决：① 浏览器跨域(CORS) ② 国内网络无法直接访问（函数在 Cloudflare 境外边缘执行，用户经 pages.dev 间接拿到）。
 
 export async function onRequest(context) {
   var cors = {
@@ -13,20 +13,30 @@ export async function onRequest(context) {
     return new Response(null, { status: 204, headers: cors });
   }
 
-  // 覆盖用户列出的领域：语言/康复/保健/心理/行为/营养
   var UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
   var keywords = ['儿童语言治疗', '儿童康复', '儿童保健', '儿童心理', '儿童行为', '儿童营养'];
   var diag = [];
-  var tasks = keywords.map(function (kw) {
-    var url = 'https://news.google.com/rss/search?q=' + encodeURIComponent(kw) + '&hl=zh-CN&gl=CN&ceid=CN:zh-Hans';
+
+  function trySrc(kw, url, label) {
     return fetch(url, { headers: { 'User-Agent': UA, 'Accept': 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8', 'Accept-Language': 'zh-CN,zh;q=0.9' } })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-      .then(function (xml) { var a = xml ? parseRSS(xml, kw) : []; diag.push({ kw: kw, err: null, got: a.length }); return a; })
-      .catch(function (e) { diag.push({ kw: kw, err: String(e && e.message ? e.message : e), got: 0 }); return []; });
+      .then(function (xml) {
+        if (/^\s*<!doctype|<html/i.test(xml)) throw new Error('HTML-not-RSS');
+        var a = xml ? parseRSS(xml, kw) : [];
+        diag.push({ src: label, kw: kw, err: null, got: a.length });
+        return a;
+      })
+      .catch(function (e) { diag.push({ src: label, kw: kw, err: String(e && e.message ? e.message : e), got: 0 }); return []; });
+  }
+
+  var tasks = [];
+  keywords.forEach(function (kw) {
+    tasks.push(trySrc(kw, 'https://www.bing.com/news/search?q=' + encodeURIComponent(kw) + '&format=rss&setlang=zh-CN', 'bing'));
+    tasks.push(trySrc(kw, 'https://news.google.com/rss/search?q=' + encodeURIComponent(kw) + '&hl=zh-CN&gl=CN&ceid=CN:zh-Hans', 'google'));
   });
 
   var results;
-  try { results = await Promise.all(tasks); } catch (e) { results = []; diag.push({ kw: '__all__', err: String(e), got: 0 }); }
+  try { results = await Promise.all(tasks); } catch (e) { results = []; }
 
   var items = [];
   var seen = {};
@@ -45,14 +55,14 @@ export async function onRequest(context) {
     try {
       var r2 = await fetch('https://www.sciencedaily.com/rss/health_medicine.xml', { headers: { 'User-Agent': UA } });
       if (r2.ok) {
-        var xml2 = await r2.text();
-        var p2 = parseRSS(xml2, '国际医学前沿');
+        var x2 = await r2.text();
+        var p2 = parseRSS(x2, '国际医学前沿');
         for (var m = 0; m < p2.length; m++) {
           var k2 = p2[m].link || p2[m].title;
           if (k2 && !seen[k2]) { seen[k2] = 1; items.push(p2[m]); }
         }
       }
-    } catch (e) { diag.push({ kw: '__fallback__', err: String(e), got: 0 }); }
+    } catch (e) { diag.push({ src: 'sciencedaily', kw: '__fb__', err: String(e), got: 0 }); }
   }
 
   items.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
