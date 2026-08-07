@@ -650,6 +650,12 @@ select.inp{-webkit-appearance:none;appearance:none;
 .ln-body{font-size:13.5px;color:#475569;line-height:1.65;margin:8px 0 11px;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow-y:auto}
 .ln-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:10px;border-top:1px dashed var(--border)}
 .ln-foot .chip{margin:0}
+.fbtn{border:1px solid var(--border);background:#fff;color:var(--muted);font-size:13px;font-weight:600;border-radius:9px;padding:7px 12px;cursor:pointer;transition:.15s}
+.fbtn:hover{background:#f1f5f9}
+.fbtn.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.ln-meta{font-size:12px;color:#94a3b8;margin:2px 0 8px}
+.ln-rss{border-left:3px solid #f59e0b}
+.ln-rss .ln-title{color:#0f172a}
 </style>
 </head>
 <body>
@@ -1515,6 +1521,7 @@ function boot(){
   if(CFG.countLeave==null) CFG.countLeave=false;
   if(!localStorage.getItem(K.seeded)){ seed(); localStorage.setItem(K.seeded,'1'); }
   render();
+  pullFeed();
 }
 
 /* ==================================================================
@@ -1725,7 +1732,73 @@ function seed(){
      src:'',status:'unread',fav:false,addedBy:'seed',createdAt:TODAY},
     {id:'ln8',title:'科普：什么时候该警惕"说话晚"需要评估',cat:'科普',tags:['语言发育迟缓'],
      body:'红色预警信号（满足任一项建议尽快评估）：\n• 12 个月仍不会指给大人看（共同注意）\n• 18 个月不会有意识叫"爸爸妈妈"以外的词\n• 24 个月词汇量 < 50，且不会把两个词连起来\n• 任何年龄出现语言倒退（原本会说的突然不会了）\n\n"贵人语迟"不是科学说法，早评估早介入，预后差异很大。',
-     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-1)}
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-1)},
+    {id:'ln9',title:'新技能：用"社交故事"帮自闭症孩子理解社交规则',cat:'新技能',tags:['自闭症谱系','社交困难'],
+     body:'社交故事（Social Stories）= 用孩子能懂的语言，把某个社交场景的"为什么、怎么做"写成小短文：\n"上厕所要关门，因为别人需要隐私；上完要冲水、洗手。"\n\n写法要点：从孩子视角、用肯定句、配图；先读给他听，再在真实场景前提示。对理解隐含规则、减少焦虑很有用。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-3)},
+    {id:'ln10',title:'科普：AAC 辅助沟通不是"让孩子不说话"',cat:'科普',tags:['无口语','沟通'],
+     body:'AAC（扩大与替代沟通）= 用图片、沟通板或语音输出设备，给还不会说话的孩子一个"表达通道"。\n\n常见误区：用了 AAC 孩子就不会学说话了。研究恰恰相反——有了沟通的成功体验，孩子反而更有动机学口语。\n\n先把"能表达"跑通，口语会顺着长出来。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-5)},
+    {id:'ln11',title:'新技能：口肌与喂食——口腔感知觉先行',cat:'新技能',tags:['构音障碍','喂食'],
+     body:'很多构音问题和口腔感知觉（太敏感/太迟钝）有关。先不急着练"说"，而是调感知：\n\n用硅胶刷、振动棒、不同质地食物做脱敏；冰刺激、深层压觉提升本体觉。\n\n感知稳了，舌头才听使唤。喂食和说话共用一套口肌，喂得好往往也说得好。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-6)},
+    {id:'ln12',title:'科普：感觉统合不是"感统课"四个字',cat:'科普',tags:['感觉统合','自闭症谱系'],
+     body:'感觉统合 = 大脑把视觉、听觉、前庭（平衡）、本体（用力）、触觉这些信息组织起来，做出恰当反应。\n\n孩子怕被碰、转圈不晕、总踮脚，可能和统合有关。\n\n训练核心不是"器械套路"，而是"刚好挑战到、又成功"的活动，并在日常里给足前庭和本体输入（抱、荡、推）。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-7)},
+    {id:'ln13',title:'新技能：作业治疗 OT 练的是"日子怎么过"',cat:'新技能',tags:['作业治疗','精细动作'],
+     body:'OT（作业治疗）不只练捏珠子。它盯的是"日常作业"：自己吃饭、穿衣、握笔、用剪刀。\n\n抓手：把任务拆到孩子够得着，用适应策略（粗柄勺、魔术贴鞋）降低门槛，再慢慢撤辅助。\n\n目标是"独立完成生活小事"，这才是泛化到家的意义。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-8)},
+    {id:'ln14',title:'科普：物理治疗 PT 与"大运动"的关系',cat:'科普',tags:['物理治疗','大运动'],
+     body:'PT（物理治疗）关注大运动基础：抬头、翻身、坐、爬、站、走，以及平衡和协调。\n\n对肌张力高/低、姿势异常的孩子，PT 用牵拉、体位摆放、核心激活来改善。\n\n家庭要点：少抱多趴、多给自由活动的地板时间，比被动按摩更能促发主动运动。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-10)},
+    {id:'ln15',title:'科普：儿童焦虑不是"胆小"，先识别再帮',cat:'科普',tags:['儿童心理','焦虑'],
+     body:'儿童焦虑常见表现：入学抗拒、反复确认"你会不会来接我"、睡前黏人、躯体化（肚子痛头痛）。\n\n别贴"胆小"标签。先共情"你有点担心，这很正常"，再逐步做"小步暴露"：怕分离就从"妈妈在门外等"开始，慢慢拉远。\n\n跳过安抚直接逼，只会更严重。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-11)},
+    {id:'ln16',title:'科普：安全依恋是语言发展的隐形地基',cat:'科普',tags:['依恋','儿童心理'],
+     body:'依恋 = 孩子相信"我需要时你会来"。安全依恋的孩子更敢探索、更愿意和人互动，而互动是语言的营养。\n\n做法朴素：及时回应哭闹、稳定可及、分离前预告并准时回来。\n\n被温柔接住过的孩子，才敢把注意力投向"学说话"这件需要冒险的事。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-12)},
+    {id:'ln17',title:'新技能：情绪调节四步——命名、接纳、降温、引导',cat:'新技能',tags:['情绪调节','行为'],
+     body:'孩子崩溃时讲道理没用。四步：\n1) 命名："你很生气因为积木倒了"\n2) 接纳："生气很正常"\n3) 降温：抱抱、深呼吸、安静角\n4) 引导：平静后再复盘"下次可以怎么帮"\n\n关键：先连连接，再教方法。情绪脑上线时，理智脑是关着的。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-13)},
+    {id:'ln18',title:'科普：正面管教替代"打骂威胁"',cat:'科普',tags:['正面管教','行为'],
+     body:'正面管教 = 和善而坚定：不纵容也不羞辱。\n\n核心工具：\n• 有限选择（"先刷牙还是先换睡衣"）\n• 自然后果（不收拾玩具就暂时收走）\n• 共同约定规则并坚持\n\n威胁和打骂短期有效、长期破坏关系和安全感，越用越要加码。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-14)},
+    {id:'ln19',title:'新技能：代币制与可视化日程表',cat:'新技能',tags:['行为','注意力弱'],
+     body:'代币制 = 好行为得"币"，攒够换奖励。要点：即时给、标准清晰、奖励是孩子真想要的。\n\n配合可视化日程表（图卡排顺序）：让孩子知道"接下来做什么、做完到哪"。\n\n可预测性能大幅降低抗拒和焦虑，特别适合自闭症、注意力弱的孩子。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-15)},
+    {id:'ln20',title:'新技能：任务分解（链锁）教一个新技能',cat:'新技能',tags:['行为','教学'],
+     body:'孩子学不会，常因任务太大。链锁 = 把技能拆成小步：洗手 = 开水→湿手→按皂→搓→冲→关水→擦。\n\n顺向链（从第一步教起）或逆向链（从最后一步倒着教）都行。\n\n每步独立练熟再连起来，孩子体验到的全是"成功"，动机就来了。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-16)},
+    {id:'ln21',title:'科普：挑食不是"惯的"，用渐进暴露破局',cat:'科普',tags:['营养','挑食'],
+     body:'幼儿挑食很常见，硬塞会演变成权力斗争。渐进暴露法：\n\n先让新食物"只是出现在桌上"（不要求吃）→ 可以摸/闻 → 舔一下 → 吃一口，每步夸。\n\n重复 10–15 次才接受很正常。不饿时不加零食，正餐才有动力。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-17)},
+    {id:'ln22',title:'科普：过敏儿的喂养与营养替代',cat:'科普',tags:['营养','过敏'],
+     body:'牛奶蛋白过敏：用深度水解或氨基酸配方替代，多数孩子 1 岁后逐渐耐受。\n\n鸡蛋/花生过敏：在医生指导下做"阶梯引入"，别长期盲目回避（反而错失耐受窗口）。\n\n回避某种食物就要找替代营养源（钙、蛋白），别让孩子缺着长。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-18)},
+    {id:'ln23',title:'新技能：把"健康零食"变成日常默认项',cat:'新技能',tags:['营养','习惯'],
+     body:'孩子爱吃甜是本能。与其禁止，不如改写环境：\n\n家里常备切好的水果、酸奶、原味坚果；把饼干糖果放高处不顺手。\n\n"默认选项健康"比"每次说不许"省力。偶尔吃点心不罪恶，规律比绝对禁绝更重要。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-19)},
+    {id:'ln24',title:'科普：儿童睡眠——时长比哄睡技巧更重要',cat:'科普',tags:['保健','睡眠'],
+     body:'大致参考：3–5 岁 10–13 小时/天，6–12 岁 9–12 小时。\n\n固定作息比"今晚多哄会儿"管用：同点睡同点起，睡前 1 小时关屏、调暗、做安静仪式。\n\n缺觉直接拉低注意力、情绪和语言学习效率，是隐形短板。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-20)},
+    {id:'ln25',title:'科普：生长曲线怎么看才不慌',cat:'科普',tags:['保健','生长'],
+     body:'别只盯"第几 percentile"，要看"自己的趋势线"。\n\n只要曲线沿着自己的百分位平稳走，偏矮偏瘦也多正常。真正要警惕的是短期内大幅掉档（跨两条线）。\n\n每次体检连点成线，比单次数字有意义得多。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-21)},
+    {id:'ln26',title:'科普：疫苗与常规体检，别等生病才进医院',cat:'科普',tags:['保健','疫苗'],
+     body:'疫苗是预防层面的"省钱省心"：一类疫苗按时打，二类（如流感、手足口、肺炎）按风险补。\n\n常规体检看生长、视力、听力、发育筛查，能在"还没明显落后"时抓早。\n\n预防永远比补救便宜，也少受罪。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-22)},
+    {id:'ln27',title:'科普：发烧的家庭处理与"何时必须就医"',cat:'科普',tags:['医疗','发烧'],
+     body:'发烧本身不是病，是信号。居家：适当补水、少穿不捂、38.5℃ 以上不适可用对乙酰氨基酚/布洛芬（按体重算量）。\n\n立即就医信号：3 月内婴儿发烧、抽搐、呼吸急促、精神极差、皮疹压不褪、持续高烧超 3 天。\n\n别用酒精擦、别捂汗。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-23)},
+    {id:'ln28',title:'科普：儿童用药安全——剂量和误区',cat:'科普',tags:['医疗','用药'],
+     body:'儿童用药按"体重"算，不是按年龄或"减半"。\n\n误区：成人药掰半给孩子、感冒药混着吃（成分重叠易过量）、用抗生素治病毒。\n\n家中药放高处锁好；每次核对剂量器（ml 不是"一格"）。不确定就问药师。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-25)},
+    {id:'ln29',title:'科普：发育迟缓的预警与及时转诊',cat:'科普',tags:['医疗','转诊'],
+     body:'除了语言红线，还要看：大运动（如 18 月不会走）、精细（2 岁不会乱画）、社交（很少眼神/不指物）。\n\n任一方面明显落后，别"再等等"。先儿保评估，必要时转康复科、发育行为儿科。\n\n转诊不是贴标签，是抢早期可塑的黄金窗。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-26)},
+    {id:'ln30',title:'家长沟通话术：把"坏消息"说成"下一步"',cat:'科普',tags:['家长沟通'],
+     body:'家长最怕听到"你家孩子落后了"。专业沟通公式：先看见进步 → 再说差距 → 给具体可做的下一步。\n\n例："这周他主动命名多了 3 次（进步）；不过从句还弱（差距）；回家每天用玩偶练三词句（下一步）。"\n\n把焦虑转成行动，家长配合度会翻倍。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-28)}
   ];
   saveAll();
 }
@@ -1844,7 +1917,7 @@ function buildTodo(){
     }
   });
   // 8) 本周学习推荐（从学习库挑一篇未读/在读的，按周轮换，纯前端"推送"）
-  var unread = LEARN.filter(function(l){ return l.status!=='done'; });
+  var unread = LEARN.filter(function(l){ return l.status!=='done' && l.addedBy!=='rss'; });
   if(unread.length){
     var wk = Math.floor(Date.now()/(7*86400000));
     var pick = unread[wk % unread.length];
@@ -1915,6 +1988,7 @@ function go(v){
   var ts=document.querySelectorAll('.nav-i');
   for(var i=0;i<ts.length;i++) ts[i].classList.toggle('on', ts[i].getAttribute('data-v')===v);
   render();
+  if(v==='learn') pullFeed();
   if(window.innerWidth<=1024) closeSide();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -3306,11 +3380,34 @@ function delPlan(pid){
 /* ==================================================================
    学习库（科普 / 新技能 / 文献 / 视频）
    ================================================================== */
-var LF2 = { q:'', cat:'', status:'' };
+var LF2 = { q:'', cat:'', status:'', rss:false };
 var LEARN_CATS = ['科普','新技能','文献','视频'];
 var LEARN_ST = { unread:'未读', reading:'在读', done:'已读' };
 function openSide(){ var s=document.getElementById('side'); if(s) s.classList.add('open'); var b=document.getElementById('sideBg'); if(b) b.classList.add('open'); }
 function closeSide(){ var s=document.getElementById('side'); if(s) s.classList.remove('open'); var b=document.getElementById('sideBg'); if(b) b.classList.remove('open'); }
+function pullFeed(){
+  try{
+    var last=localStorage.getItem('wb_slp_feeddate');
+    if(last===TODAY) return;
+    fetch('/api/feed').then(function(r){ return r.json(); }).then(function(d){
+      if(d && d.items && d.items.length){
+        d.items.forEach(function(it){
+          if(!it.link) return;
+          var has=LEARN.some(function(l){ return l.addedBy==='rss' && l.link===it.link; });
+          if(!has){
+            LEARN.unshift({ id:'rss'+Date.now()+Math.floor(Math.random()*1e4),
+              title:it.title, cat:'热点', tags:[it.kw||'热点'], src:'', body:it.desc||'',
+              status:'unread', fav:false, addedBy:'rss', source:it.source||'', link:it.link,
+              rssDate:it.date||'', createdAt:TODAY });
+          }
+        });
+        saveAll();
+        if(VIEW==='learn') render();
+      }
+      localStorage.setItem('wb_slp_feeddate', TODAY);
+    }).catch(function(){ localStorage.setItem('wb_slp_feeddate', TODAY); });
+  }catch(e){ try{ localStorage.setItem('wb_slp_feeddate', TODAY); }catch(e2){} }
+}
 function viewLearn(){
   var list = learnList();
   var total = LEARN.length;
@@ -3329,6 +3426,7 @@ function viewLearn(){
       '<option value="">全部分类</option>'+LEARN_CATS.map(function(c){return '<option'+(LF2.cat===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select>'+
     '<select class="fsel" onchange="LF2.status=this.value;learnRender()">'+
       '<option value="">全部状态</option>'+Object.keys(LEARN_ST).map(function(k){return '<option value="'+k+'"'+(LF2.status===k?' selected':'')+'>'+LEARN_ST[k]+'</option>';}).join('')+'</select>'+
+    '<button class="fbtn'+(LF2.rss?' on':'')+'" onclick="LF2.rss=!LF2.rss;render()">只看热点</button>'+
     '</div>';
   html += '<div id="learnList">'+learnCards(list)+'</div>';
   html += '</div></div>';
@@ -3339,6 +3437,7 @@ function learnList(){
   return LEARN.slice().sort(function(a,b){ return (b.fav?1:0)-(a.fav?1:0) || (a.createdAt<b.createdAt?1:-1); }).filter(function(l){
     if(LF2.cat && l.cat!==LF2.cat) return false;
     if(LF2.status && l.status!==LF2.status) return false;
+    if(LF2.rss && l.addedBy!=='rss') return false;
     if(q){
       var hay=(l.title+' '+(l.body||'')+' '+(l.tags||[]).join(' ')).toLowerCase();
       if(hay.indexOf(q)<0) return false;
@@ -3352,10 +3451,12 @@ function learnCards(list){
     var tags=(l.tags||[]).map(function(t){return '<span class="chip">'+esc(t)+'</span>';}).join('');
     var body=(l.body||'').replace(/\n/g,'<br>');
     var stCls = l.status==='done'?'dn':(l.status==='reading'?'lv':'pd');
-    var srcBtn = l.src ? '<a class="btn sm" href="'+esc(l.src)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">查看原文</a>' : '';
+    var srcBtn = '';
+    if(l.addedBy==='rss' && l.link){ srcBtn = '<a class="btn sm pri" href="'+esc(l.link)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">打开原文</a>'; }
+    else if(l.src){ srcBtn = '<a class="btn sm" href="'+esc(l.src)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">查看原文</a>'; }
     var nextSt = l.status==='done'?'unread':(l.status==='reading'?'done':'reading');
     var nextLbl = l.status==='done'?'标未读':(l.status==='reading'?'标已读':'标在读');
-    return '<div class="ln-card'+(l.status==='done'?' ln-done':'')+'">'+
+    return '<div class="ln-card'+(l.status==='done'?' ln-done':'')+(l.addedBy==='rss'?' ln-rss':'')+'">'+
       '<div class="ln-top">'+
         '<span class="chip t4">'+esc(l.cat||'其他')+'</span>'+tags+
         '<span class="sp"></span>'+
@@ -3363,11 +3464,12 @@ function learnCards(list){
       '</div>'+
       '<div class="ln-title">'+esc(l.title)+'</div>'+
       '<div class="ln-body">'+body+'</div>'+
+      (l.addedBy==='rss' ? '<div class="ln-meta">来源：'+(l.source||'网络')+(l.rssDate?' · '+l.rssDate:'')+'</div>' : '')+
       '<div class="ln-foot">'+
         '<span class="chip '+stCls+'">'+LEARN_ST[l.status||'unread']+'</span>'+
         srcBtn+
         '<button class="btn sm" onclick="markLearn(\''+l.id+'\',\''+nextSt+'\')">'+nextLbl+'</button>'+
-        '<button class="btn sm" onclick="openLearnForm(\''+l.id+'\')">编辑</button>'+
+        (l.addedBy==='rss' ? '' : '<button class="btn sm" onclick="openLearnForm(\''+l.id+'\')">编辑</button>')+
         '<button class="btn sm dan" onclick="delLearn(\''+l.id+'\')">删除</button>'+
       '</div>'+
     '</div>';
