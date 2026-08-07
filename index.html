@@ -44,7 +44,7 @@ input,select,textarea{font-family:inherit;font-size:16px;color:var(--text)}
 svg{display:block;flex:none}
 
 /* ============ layout ============ */
-.wrap{max-width:1180px;margin:0 auto;padding:0 16px 120px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 32px}
 @media(min-width:768px){.wrap{padding-bottom:48px}}
 
 /* ============ header ============ */
@@ -102,26 +102,36 @@ svg{display:block;flex:none}
 }
 
 /* ============ tabs ============ */
-.tabs{display:flex;gap:6px;margin:18px 0 14px;background:var(--card);padding:5px;border-radius:12px;border:1px solid var(--border);box-shadow:var(--sh)}
-.tab{flex:1;height:42px;border-radius:9px;font-size:14.5px;font-weight:650;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:7px;transition:.15s}
-.tab.on{background:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(13,148,136,.3)}
-.tab:not(.on):hover{background:#f1f5f9;color:var(--text)}
-.tab .cnt{font-size:11px;background:rgba(0,0,0,.08);padding:1px 6px;border-radius:20px;font-weight:700}
-.tab.on .cnt{background:rgba(255,255,255,.25)}
+/* ============ 左侧导航 / 抽屉 ============ */
+.side{position:fixed;top:0;left:0;bottom:0;width:210px;background:var(--card);border-right:1px solid var(--border);
+  z-index:90;display:flex;flex-direction:column}
+.side-brand{height:68px;display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid var(--border);flex:none}
+.side-ic{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--brand-d),var(--brand));
+  display:flex;align-items:center;justify-content:center;flex:none}
+.side-t{font-size:15px;font-weight:800;color:var(--text);line-height:1.1}
+.side-s{font-size:11px;color:var(--muted)}
+.nav{display:flex;flex-direction:column;gap:3px;padding:10px;overflow-y:auto;flex:1}
+.nav-i{display:flex;align-items:center;gap:11px;width:100%;height:46px;padding:0 12px;border:none;background:transparent;
+  border-radius:10px;font-size:15px;font-weight:650;color:#475569;cursor:pointer;text-align:left;transition:.13s}
+.nav-i svg{width:19px;height:19px;flex:none;color:var(--muted)}
+.nav-i:hover{background:#f1f5f9;color:var(--text)}
+.nav-i.on{background:var(--brand-l);color:var(--brand-d)}
+.nav-i.on svg{color:var(--brand)}
+.nav-i .cnt{margin-left:auto;font-size:11px;background:rgba(0,0,0,.07);padding:1px 8px;border-radius:20px;font-weight:700;color:#475569}
+.nav-i.on .cnt{background:#fff;color:var(--brand-d)}
+.side-ft{font-size:11px;color:var(--muted);padding:12px 18px;border-top:1px solid var(--border);line-height:1.5;flex:none}
+.hbtn.menu{display:none}
+.sideBg{display:none}
+.wrap{margin-left:210px}
+@media(min-width:1025px){ .hdr-in{max-width:none;margin:0;padding-left:226px;padding-right:16px} }
 @media(max-width:1024px){
-  .tabs{position:fixed;bottom:0;left:0;right:0;z-index:60;margin:0;border-radius:0;border:none;border-top:1px solid var(--border);
-    padding:6px 6px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -2px 14px rgba(15,23,42,.08)}
-  .tab{flex-direction:column;gap:2px;height:50px;font-size:11px;border-radius:10px;padding:0 2px}
-  .tab span{white-space:nowrap}
-  .tab .cnt{display:none}
-}
-/* iPad 竖屏(≤1024)也用底部固定标签栏，避免标签悬浮在屏幕中间 */
-@media(min-width:769px) and (max-width:1024px){ .wrap{padding-bottom:88px} }
-/* 6 个标签在窄屏上收紧，避免文字换行 */
-@media(max-width:420px){
-  .tabs{gap:2px;padding:5px 3px calc(5px + env(safe-area-inset-bottom))}
-  .tab{font-size:10px;gap:1px}
-  .tab svg{width:16px;height:16px}
+  .side{transform:translateX(-100%);transition:transform .22s ease;box-shadow:4px 0 26px rgba(15,23,42,.2);width:248px}
+  .side.open{transform:translateX(0)}
+  .sideBg.open{position:fixed;inset:0;background:rgba(15,23,42,.42);z-index:85;display:block}
+  .hbtn.menu{display:inline-flex}
+  .wrap{margin-left:0;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  .nav-i{height:50px;font-size:16px}
+  .nav-i svg{width:21px;height:21px}
 }
 
 /* ============ cards & common ============ */
@@ -622,19 +632,40 @@ select.inp{-webkit-appearance:none;appearance:none;
 .ai-set label:first-child{margin-top:0}
 .ai-setmsg{font-size:12px;color:var(--brand);margin-left:8px;font-weight:600}
 @media(max-width:600px){ .ai-actions .btn{flex:1 1 100%} }
+/* ============ 学习库 ============ */
+.fin{width:100%;height:42px;padding:0 12px;border:1px solid var(--border-s);border-radius:10px;background:#fff;outline:none;font-size:14px}
+.fin:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-l)}
+.farea{width:100%;padding:10px 12px;border:1px solid var(--border-s);border-radius:10px;background:#fff;outline:none;font-size:14px;line-height:1.6;resize:vertical;font-family:inherit}
+.farea:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-l)}
+.flexb{display:flex;align-items:center;gap:10px}
+.learn-stats{font-size:12.5px;color:var(--muted);margin:10px 0 12px}
+.ln-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin-bottom:11px;box-shadow:var(--sh);transition:.15s}
+.ln-card:hover{border-color:#99f6e4}
+.ln-card.ln-done{opacity:.72}
+.ln-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+.ln-top .sp{margin-left:auto}
+.ln-fav{border:none;background:transparent;font-size:19px;color:#cbd5e1;cursor:pointer;line-height:1;padding:2px 4px;min-width:34px;min-height:34px}
+.ln-fav.on{color:#f59e0b}
+.ln-title{font-size:15.5px;font-weight:700;color:var(--text);line-height:1.4}
+.ln-body{font-size:13.5px;color:#475569;line-height:1.65;margin:8px 0 11px;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow-y:auto}
+.ln-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:10px;border-top:1px dashed var(--border)}
+.ln-foot .chip{margin:0}
 </style>
 </head>
 <body>
 
 <header class="hdr">
   <div class="hdr-in">
+    <button class="hbtn menu" onclick="openSide()" aria-label="菜单">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="logo">
       <div class="logo-ic">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
       </div>
       <div>
         <h1>言语治疗工作台</h1>
-        <p>档案 · 课程 · 疗程 · 考勤</p>
+        <p>档案 · 课程 · 疗程 · 考勤 · 学习库</p>
       </div>
     </div>
     <div class="hdr-acts">
@@ -659,6 +690,50 @@ select.inp{-webkit-appearance:none;appearance:none;
 </header>
 <input type="file" id="impFile" accept="application/json,.json" style="display:none" onchange="doImport(this)">
 
+<aside class="side" id="side">
+  <div class="side-brand">
+    <div class="side-ic">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+    </div>
+    <div>
+      <div class="side-t">言语治疗</div>
+      <div class="side-s">工作台</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nav-i on" data-v="kids" onclick="go('kids')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>档案</span><span class="cnt" id="cKids">0</span>
+    </button>
+    <button class="nav-i" data-v="logs" onclick="go('logs')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>课程</span><span class="cnt" id="cLogs">0</span>
+    </button>
+    <button class="nav-i" data-v="course" onclick="go('course')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+      <span>疗程</span><span class="cnt" id="cCourse">0</span>
+    </button>
+    <button class="nav-i" data-v="attend" onclick="go('attend')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>考勤</span><span class="cnt" id="cAtt">0</span>
+    </button>
+    <button class="nav-i" data-v="stat" onclick="go('stat')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+      <span>统计</span>
+    </button>
+    <button class="nav-i" data-v="assess" onclick="go('assess')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>评估</span><span class="cnt" id="cLib">0</span>
+    </button>
+    <button class="nav-i" data-v="learn" onclick="go('learn')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>
+      <span>学习库</span><span class="cnt" id="cLearn">0</span>
+    </button>
+  </nav>
+  <div class="side-ft">数据存本机浏览器 · 可添加到主屏幕离线用</div>
+</aside>
+<div class="sideBg" id="sideBg" onclick="closeSide()"></div>
+
 <div class="wrap">
   <div id="tipBar"></div>
 
@@ -675,33 +750,7 @@ select.inp{-webkit-appearance:none;appearance:none;
     <div class="today-body" id="todayBody"></div>
   </section>
 
-  <!-- tabs -->
-  <nav class="tabs">
-    <button class="tab on" data-v="kids" onclick="go('kids')">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span>档案</span><span class="cnt" id="cKids">0</span>
-    </button>
-    <button class="tab" data-v="logs" onclick="go('logs')">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      <span>课程</span><span class="cnt" id="cLogs">0</span>
-    </button>
-    <button class="tab" data-v="course" onclick="go('course')">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-      <span>疗程</span><span class="cnt" id="cCourse">0</span>
-    </button>
-    <button class="tab" data-v="attend" onclick="go('attend')">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <span>考勤</span><span class="cnt" id="cAtt">0</span>
-    </button>
-    <button class="tab" data-v="stat" onclick="go('stat')">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-      <span>统计</span>
-    </button>
-    <button class="tab" data-v="assess" onclick="go('assess')">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      <span>评估</span><span class="cnt" id="cLib">0</span>
-    </button>
-  </nav>
+  <!-- 导航已移至左侧 sidebar -->
 
   <main id="view"></main>
 </div>
@@ -719,7 +768,7 @@ select.inp{-webkit-appearance:none;appearance:none;
 /* ---------- keys ---------- */
 var K = {
   kids:'wb_slp_kids', sessions:'wb_slp_sessions', plans:'wb_slp_plans', pays:'wb_slp_pays',
-  lib:'wb_slp_lib', assess:'wb_slp_assess', books:'wb_slp_books',
+  lib:'wb_slp_lib', assess:'wb_slp_assess', books:'wb_slp_books', learn:'wb_slp_learn',
   cfg:'wb_slp_cfg', sync:'wb_slp_sync', seeded:'wb_slp_seeded', tipDismiss:'wb_slp_tipdismiss'
 };
 
@@ -762,6 +811,7 @@ function saveAll(){
   ok = save(K.lib,LIB) && ok;
   ok = save(K.assess,ASSESS) && ok;
   ok = save(K.books,BOOKS) && ok;
+  ok = save(K.learn,LEARN) && ok;
   ok = save(K.cfg,CFG) && ok;
   return ok;
 }
@@ -1441,7 +1491,7 @@ var ST_CLS   = {done:'dn', pending:'pd', leave:'lv', absent:'ab'};
 // 缴费按「疗程」计：一个疗程 N 节 = N 次缴费，逐节确认，不再区分挂号批次
 
 /* ---------- state ---------- */
-var KIDS=[], SESSIONS=[], PLANS=[], PAYS=[], LIB=[], ASSESS=[], BOOKS=[], CFG={}, SYNC={};
+var KIDS=[], SESSIONS=[], PLANS=[], PAYS=[], LIB=[], ASSESS=[], BOOKS=[], LEARN=[], CFG={}, SYNC={};
 var VIEW='kids';
 var F = { q:'', tag:'', status:'active' };          // 档案筛选
 var LF = { kid:'', status:'', from:'', to:'' };     // 课程筛选
@@ -1457,6 +1507,7 @@ function boot(){
   LIB      = load(K.lib, []);
   ASSESS   = load(K.assess, []);
   BOOKS    = load(K.books, []);
+  LEARN    = load(K.learn, []);
   CFG      = load(K.cfg, {perCourse:10, waitAlertDays:30, countLeave:false, customTags:[]});
   SYNC     = load(K.sync, {});
   if(CFG.perCourse==null) CFG.perCourse=10;
@@ -1650,6 +1701,32 @@ function seed(){
      source:'电话预约',note:'（示例：约了到日子还没标记结果，会一直置顶提醒）',
      status:'wait',kidId:null,createdAt:dOff(-6)}
   ];
+  LEARN=[
+    {id:'ln1',title:'口吃的"流利塑造"：先建流畅，再抠准确',cat:'科普',tags:['口吃'],
+     body:'很多家长一听到孩子结巴，第一反应是"慢点说、想好再说"，但这反而会让孩子更紧张。\n\n临床思路是"流利塑造（fluency shaping）"：先用轻松的语速、拉长元音、轻松起音，帮孩子在低压力里把话说顺；等流畅度稳了，再逐步回到自然语速，并做"易化"——把正确流畅的说话方式变成习惯。\n\n给家长的金句：别在说话中途打断纠正，等他说完，你用正确的方式自然复述一遍，比指责有效十倍。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-30)},
+    {id:'ln2',title:'新技能：用"平行描述"自然增加孩子的语言输入',cat:'新技能',tags:['语言发育迟缓'],
+     body:'平行描述（parallel talk）= 你当解说员，把孩子正在做的事用语言实时说出来：\n"宝宝在搭积木——红色的积木放上去——咚！倒了对不对。"\n\n要点：\n1) 用孩子当前的注意力焦点，不强行转移\n2) 句子比孩子当前水平高一丢丢（i+1）\n3) 不要求他回应，先让"听"变日常\n\n每天生活里随时做（吃饭、洗澡、穿衣服），比单独训练更自然、泛化更好。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-22)},
+    {id:'ln3',title:'自闭症儿童的"共同注意"为什么是语言的前提',cat:'科普',tags:['自闭症谱系','社交困难'],
+     body:'共同注意（joint attention）= 孩子和大人"看向同一个东西"的能力，比如指给你看、跟着你的手指看。它是社会性沟通和语言发展的地基。\n\n没有共同注意，孩子学语言更像"背单词"，难用在真实交流里。\n\n训练抓手：先从"响应性共同注意"（跟着看）练起，再练"发起性"（主动指给你看、给你看）；用孩子真正想要的东西做动机，比教具更有效。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-15)},
+    {id:'ln4',title:'新技能：构音障碍的"最小对立对"训练法',cat:'新技能',tags:['构音障碍'],
+     body:'最小对立对（minimal pairs）= 用"只差一个音"的词对，让孩子体会"音不同→意思不同"：\n比如 "四(sì) / 是(shì)"、"猫(māo) / 包(bāo)"。\n\n步骤：\n1) 先确认孩子能听辨这两个音（听觉辨音）\n2) 用图卡让孩子选"你要哪个"，故意说错引他纠正\n3) 从单音→音节→词→短语，逐步拉长\n\n比单纯"跟我念"更有沟通动机，孩子知道"说对才有对的图"。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-9)},
+    {id:'ln5',title:'文献速读：早期语言干预的"剂量效应"——一周几次最有效',cat:'文献',tags:['语言发育迟缓'],
+     body:'核心结论（综合多项 RCT）：对语言发育迟缓儿童，每周 2–3 次、每次 30–45 分钟的直接干预 + 高质量家庭泛化，通常优于"一周一次但时长拉很长"。\n\n关键不是单次多长，而是"频率 + 家庭里每天的真实练习"。治疗室里练，回家不练，效果打折扣。\n\n给家长的定位：你是"主治疗师"，机构/诊所是"教练"。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-4)},
+    {id:'ln6',title:'科普：屏幕时间对幼儿语言发展的真实影响',cat:'科普',tags:['语言发育迟缓','注意力弱'],
+     body:'研究共识：被动看视频（没人互动）对 0–3 岁语言帮助很小，因为学语言需要"一来一回"的社会互动。\n\n但"视频通话"例外——有真人实时回应时，幼儿能从中学习。\n\n建议：把屏幕时间换成"大人陪着说"的时间；如果看，选能一起讨论的内容，边看边聊，比让孩子自己刷强。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-2)},
+    {id:'ln7',title:'新技能：用"选择性忽视"减少课堂问题行为',cat:'新技能',tags:['自闭症谱系','注意力弱'],
+     body:'孩子用"闹"来换关注时，越制止越强化。选择性忽视（planned ignoring）= 对无害的问题行为，平静地不给关注，同时立刻强化他做的对的事。\n\n前提：\n1) 行为必须无害（不安全的行为不能忽视）\n2) 忽视要"彻底"——眼神、语言、身体都撤掉\n3) 同时抓"替代行为"猛夸，别只忽视不强化\n\n消退初期会有"行为爆发"（更闹），提前跟家长打预防针，别妥协。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:TODAY},
+    {id:'ln8',title:'科普：什么时候该警惕"说话晚"需要评估',cat:'科普',tags:['语言发育迟缓'],
+     body:'红色预警信号（满足任一项建议尽快评估）：\n• 12 个月仍不会指给大人看（共同注意）\n• 18 个月不会有意识叫"爸爸妈妈"以外的词\n• 24 个月词汇量 < 50，且不会把两个词连起来\n• 任何年龄出现语言倒退（原本会说的突然不会了）\n\n"贵人语迟"不是科学说法，早评估早介入，预后差异很大。',
+     src:'',status:'unread',fav:false,addedBy:'seed',createdAt:dOff(-1)}
+  ];
   saveAll();
 }
 
@@ -1766,6 +1843,17 @@ function buildTodo(){
         acts:[{t:'看预约', c:'btn sm', f:"go('attend')"},{t:'编辑', c:'btn sm', f:"openBookForm('"+b.id+"')"}] });
     }
   });
+  // 8) 本周学习推荐（从学习库挑一篇未读/在读的，按周轮换，纯前端"推送"）
+  var unread = LEARN.filter(function(l){ return l.status!=='done'; });
+  if(unread.length){
+    var wk = Math.floor(Date.now()/(7*86400000));
+    var pick = unread[wk % unread.length];
+    out.push({ lv:'ok', order:5,
+      title:'本周学习推荐：'+pick.title,
+      sub:(pick.cat||'')+(pick.tags&&pick.tags.length?(' · '+pick.tags.join('/')):'')+' · 打开学习库读一读，专业不掉队',
+      acts:[{t:'去学习', c:'btn sm pri', f:"go('learn')"},
+            {t:'标已读', c:'btn sm', f:"markLearn('"+pick.id+"','done')"}] });
+  }
   out.sort(function(a,b){ return a.order-b.order; });
   return out;
 }
@@ -1824,9 +1912,10 @@ function renderTip(){
    ================================================================== */
 function go(v){
   VIEW=v;
-  var ts=document.querySelectorAll('.tab');
+  var ts=document.querySelectorAll('.nav-i');
   for(var i=0;i<ts.length;i++) ts[i].classList.toggle('on', ts[i].getAttribute('data-v')===v);
   render();
+  if(window.innerWidth<=1024) closeSide();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function render(){
@@ -1838,12 +1927,14 @@ function render(){
     var e=s.entries; for(var id in e){ if(e[id].status==='pending') return true; } return false; }).length
     + BOOKS.filter(function(b){ return b.status==='wait'; }).length;
   if(document.getElementById('cLib')) document.getElementById('cLib').textContent = ASSESS.length;
+  if(document.getElementById('cLearn')) document.getElementById('cLearn').textContent = LEARN.filter(function(l){return l.status!=='done';}).length;
   var el=document.getElementById('view');
   if(VIEW==='kids') el.innerHTML=viewKids();
   else if(VIEW==='logs') el.innerHTML=viewLogs();
   else if(VIEW==='course') el.innerHTML=viewCourse();
   else if(VIEW==='stat') el.innerHTML=viewStat();
   else if(VIEW==='assess') el.innerHTML=viewAssess();
+  else if(VIEW==='learn') el.innerHTML=viewLearn();
   else el.innerHTML=viewAttend();
 }
 
@@ -3213,6 +3304,120 @@ function delPlan(pid){
 }
 
 /* ==================================================================
+   学习库（科普 / 新技能 / 文献 / 视频）
+   ================================================================== */
+var LF2 = { q:'', cat:'', status:'' };
+var LEARN_CATS = ['科普','新技能','文献','视频'];
+var LEARN_ST = { unread:'未读', reading:'在读', done:'已读' };
+function openSide(){ var s=document.getElementById('side'); if(s) s.classList.add('open'); var b=document.getElementById('sideBg'); if(b) b.classList.add('open'); }
+function closeSide(){ var s=document.getElementById('side'); if(s) s.classList.remove('open'); var b=document.getElementById('sideBg'); if(b) b.classList.remove('open'); }
+function viewLearn(){
+  var list = learnList();
+  var total = LEARN.length;
+  var unreadN = LEARN.filter(function(l){return l.status!=='done';}).length;
+  var doneN = LEARN.filter(function(l){return l.status==='done';}).length;
+  var favN = LEARN.filter(function(l){return l.fav;}).length;
+  var html = '';
+  html += '<div class="card"><div class="card-b">';
+  html += '<div class="flexb"><h3 style="margin:0;font-size:16px">学习库</h3>'+
+          '<button class="btn pri sm" onclick="openLearnForm(null)">+ 新建学习条目</button></div>';
+  html += '<div class="learn-stats">共 '+total+' 篇 · 未读/在读 '+unreadN+' · 已读 '+doneN+' · 收藏 '+favN+'</div>';
+  html += '<div class="filters">'+
+    '<div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'+
+    '<input id="lQ" value="'+esc(LF2.q)+'" placeholder="搜索标题/正文/标签" oninput="LF2.q=this.value;learnRender()"></div>'+
+    '<select class="fsel" onchange="LF2.cat=this.value;learnRender()">'+
+      '<option value="">全部分类</option>'+LEARN_CATS.map(function(c){return '<option'+(LF2.cat===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select>'+
+    '<select class="fsel" onchange="LF2.status=this.value;learnRender()">'+
+      '<option value="">全部状态</option>'+Object.keys(LEARN_ST).map(function(k){return '<option value="'+k+'"'+(LF2.status===k?' selected':'')+'>'+LEARN_ST[k]+'</option>';}).join('')+'</select>'+
+    '</div>';
+  html += '<div id="learnList">'+learnCards(list)+'</div>';
+  html += '</div></div>';
+  return html;
+}
+function learnList(){
+  var q=(LF2.q||'').trim().toLowerCase();
+  return LEARN.slice().sort(function(a,b){ return (b.fav?1:0)-(a.fav?1:0) || (a.createdAt<b.createdAt?1:-1); }).filter(function(l){
+    if(LF2.cat && l.cat!==LF2.cat) return false;
+    if(LF2.status && l.status!==LF2.status) return false;
+    if(q){
+      var hay=(l.title+' '+(l.body||'')+' '+(l.tags||[]).join(' ')).toLowerCase();
+      if(hay.indexOf(q)<0) return false;
+    }
+    return true;
+  });
+}
+function learnCards(list){
+  if(!list.length) return '<div class="empty"><p>没有匹配的学习条目</p><small>点上方"新建学习条目"添加，或从首页「本周学习推荐」进入</small></div>';
+  return list.map(function(l){
+    var tags=(l.tags||[]).map(function(t){return '<span class="chip">'+esc(t)+'</span>';}).join('');
+    var body=(l.body||'').replace(/\n/g,'<br>');
+    var stCls = l.status==='done'?'dn':(l.status==='reading'?'lv':'pd');
+    var srcBtn = l.src ? '<a class="btn sm" href="'+esc(l.src)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">查看原文</a>' : '';
+    var nextSt = l.status==='done'?'unread':(l.status==='reading'?'done':'reading');
+    var nextLbl = l.status==='done'?'标未读':(l.status==='reading'?'标已读':'标在读');
+    return '<div class="ln-card'+(l.status==='done'?' ln-done':'')+'">'+
+      '<div class="ln-top">'+
+        '<span class="chip t4">'+esc(l.cat||'其他')+'</span>'+tags+
+        '<span class="sp"></span>'+
+        '<button class="ln-fav'+(l.fav?' on':'')+'" onclick="toggleFav(\''+l.id+'\')" title="收藏">'+(l.fav?'★':'☆')+'</button>'+
+      '</div>'+
+      '<div class="ln-title">'+esc(l.title)+'</div>'+
+      '<div class="ln-body">'+body+'</div>'+
+      '<div class="ln-foot">'+
+        '<span class="chip '+stCls+'">'+LEARN_ST[l.status||'unread']+'</span>'+
+        srcBtn+
+        '<button class="btn sm" onclick="markLearn(\''+l.id+'\',\''+nextSt+'\')">'+nextLbl+'</button>'+
+        '<button class="btn sm" onclick="openLearnForm(\''+l.id+'\')">编辑</button>'+
+        '<button class="btn sm dan" onclick="delLearn(\''+l.id+'\')">删除</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+function learnRender(){ var el=document.getElementById('learnList'); if(el) el.innerHTML=learnCards(learnList()); }
+function toggleFav(id){ for(var i=0;i<LEARN.length;i++){ if(LEARN[i].id===id){ LEARN[i].fav=!LEARN[i].fav; break; } } saveAll(); render(); }
+function markLearn(id,st){
+  for(var i=0;i<LEARN.length;i++){ if(LEARN[i].id===id){ LEARN[i].status=st; break; } }
+  saveAll(); render();
+  toast('已标记为「'+LEARN_ST[st]+'」','ok');
+}
+function delLearn(id){
+  if(!confirm('确定删除这条学习条目？此操作不可恢复。')) return;
+  LEARN = LEARN.filter(function(l){ return l.id!==id; });
+  saveAll(); render(); toast('已删除','ok');
+}
+function openLearnForm(id){
+  var l = id ? (function(){ for(var i=0;i<LEARN.length;i++) if(LEARN[i].id===id) return LEARN[i]; return null; })() : null;
+  var isNew = !l;
+  var html = '<div class="fg">'+
+    '<label>标题</label><input id="lnTitle" class="fin" value="'+esc(l?l.title:'')+'" placeholder="如：口吃儿童的流利塑造技巧">'+
+    '<label>分类</label><select id="lnCat" class="fsel">'+
+      LEARN_CATS.map(function(c){return '<option'+(l&&l.cat===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select>'+
+    '<label>标签（逗号分隔）</label><input id="lnTags" class="fin" value="'+esc(l&&l.tags?(l.tags.join(',')):'')+'" placeholder="如：口吃,家长沟通">'+
+    '<label>原文链接（可选）</label><input id="lnSrc" class="fin" value="'+esc(l?l.src:'')+'" placeholder="https://...">'+
+    '<label>正文</label><textarea id="lnBody" class="farea" rows="8" placeholder="贴入科普要点、操作步骤、读书笔记...">'+esc(l?l.body:'')+'</textarea>'+
+    '<label>状态</label><select id="lnSt" class="fsel">'+
+      Object.keys(LEARN_ST).map(function(k){return '<option value="'+k+'"'+(l&&l.status===k?' selected':'')+'>'+LEARN_ST[k]+'</option>';}).join('')+'</select>'+
+    '</div>';
+  showMo(isNew?'新建学习条目':'编辑学习条目', html,
+    '<button class="btn" onclick="closeMo()">取消</button>'+
+    '<button class="btn pri" onclick="saveLearn(\''+id+'\')">保存</button>', 'narrow');
+}
+function saveLearn(id){
+  var title=document.getElementById('lnTitle').value.trim();
+  if(!title){ toast('请填写标题','err'); return; }
+  var cat=document.getElementById('lnCat').value;
+  var tags=document.getElementById('lnTags').value.split(',').map(function(s){return s.trim();}).filter(function(s){return s;});
+  var src=document.getElementById('lnSrc').value.trim();
+  var body=document.getElementById('lnBody').value;
+  var st=document.getElementById('lnSt').value;
+  if(id){
+    for(var i=0;i<LEARN.length;i++){ if(LEARN[i].id===id){ LEARN[i].title=title; LEARN[i].cat=cat; LEARN[i].tags=tags; LEARN[i].src=src; LEARN[i].body=body; LEARN[i].status=st; break; } }
+  }else{
+    LEARN.push({ id:'ln'+Date.now(), title:title, cat:cat, tags:tags, src:src, body:body, status:st, fav:false, addedBy:'me', createdAt:TODAY });
+  }
+  saveAll(); closeMo(); render(); toast('已保存','ok');
+}
+/* ==================================================================
    设置 / 备份
    ================================================================== */
 function openSettings(){
@@ -4566,7 +4771,7 @@ function printReport(){
 function doExport(){
   var data={
     _app:'言语治疗工作台', _version:1, _exportedAt:new Date().toISOString(),
-    kids:KIDS, sessions:SESSIONS, plans:PLANS, pays:PAYS, lib:LIB, assess:ASSESS, books:BOOKS, cfg:CFG
+    kids:KIDS, sessions:SESSIONS, plans:PLANS, pays:PAYS, lib:LIB, assess:ASSESS, books:BOOKS, learn:LEARN, cfg:CFG
   };
   var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   var url=URL.createObjectURL(blob);
@@ -4609,7 +4814,7 @@ function confirmImport(){
   var mode=segVal('imMode');
   if(mode==='replace'){
     if(!confirm('整体替换会清空当前设备上的全部数据，且无法撤销。\n\n确定继续吗？（建议先导出一份当前数据）')) return;
-    KIDS=d.kids||[]; SESSIONS=d.sessions||[]; PLANS=d.plans||[]; PAYS=d.pays||[]; LIB=d.lib||[]; ASSESS=d.assess||[]; BOOKS=d.books||[];
+    KIDS=d.kids||[]; SESSIONS=d.sessions||[]; PLANS=d.plans||[]; PAYS=d.pays||[]; LIB=d.lib||[]; ASSESS=d.assess||[]; BOOKS=d.books||[]; LEARN=d.learn||[];
     if(d.cfg) CFG=d.cfg;
   }else{
     var mk={}; KIDS.forEach(function(k,i){ mk[k.id]=i; });
@@ -4626,6 +4831,8 @@ function confirmImport(){
     (d.assess||[]).forEach(function(a){ if(ma[a.id]!=null) ASSESS[ma[a.id]]=a; else ASSESS.push(a); });
     var mb={}; BOOKS.forEach(function(b,i){ mb[b.id]=i; });
     (d.books||[]).forEach(function(b){ if(mb[b.id]!=null) BOOKS[mb[b.id]]=b; else BOOKS.push(b); });
+    var ml2={}; LEARN.forEach(function(l,i){ ml2[l.id]=i; });
+    (d.learn||[]).forEach(function(l){ if(ml2[l.id]!=null) LEARN[ml2[l.id]]=l; else LEARN.push(l); });
   }
   if(!saveAll || !save(K.kids,KIDS)){ }
   saveAll();
@@ -4658,7 +4865,7 @@ function exportCSV(){
 
 function clearDemo(){
   var demoK=['k1','k2','k3','k4','k5'];
-  var has=KIDS.some(function(k){ return demoK.indexOf(k.id)>=0; });
+  var has=KIDS.some(function(k){ return demoK.indexOf(k.id)>=0; }) || LEARN.some(function(l){ return l.addedBy==='seed'; });
   if(!has){ toast('没有检测到示例数据'); return; }
   if(!confirm('将删除 5 个示例孩子（林小雨、陈子哲、林果果、王天天、赵小满）及其全部课程记录和计划。\n\n你自己新建的数据不会受影响。确定吗？')) return;
   KIDS=KIDS.filter(function(k){ return demoK.indexOf(k.id)<0; });
@@ -4668,6 +4875,7 @@ function clearDemo(){
     demoK.forEach(function(id){ delete s.entries[id]; });
   });
   SESSIONS=SESSIONS.filter(function(s){ return s.kidIds.length>0; });
+  LEARN=LEARN.filter(function(l){ return l.addedBy!=='seed'; });
   saveAll(); closeMo(); render(); toast('示例数据已清空','ok');
 }
 
@@ -4675,7 +4883,7 @@ function clearAll(){
   if(!confirm('⚠️ 第 1 步确认\n\n即将清空全部数据：'+KIDS.length+' 份档案、'+SESSIONS.length+' 条课程记录、'+PLANS.length+' 条计划、'+LIB.length+' 份资料。\n\n此操作不可恢复。确定继续吗？')) return;
   var t=prompt('⚠️ 第 2 步确认\n\n这是最后一次机会。请输入「清空」两个字确认：','');
   if(t!=='清空'){ toast('输入不匹配，已取消操作'); return; }
-  KIDS=[]; SESSIONS=[]; PLANS=[]; PAYS=[]; LIB=[]; ASSESS=[]; BOOKS=[];
+  KIDS=[]; SESSIONS=[]; PLANS=[]; PAYS=[]; LIB=[]; ASSESS=[]; BOOKS=[]; LEARN=[];
   saveAll();
   localStorage.setItem(K.seeded,'1');
   closeMo(); render(); toast('全部数据已清空','ok');
