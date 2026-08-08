@@ -3508,7 +3508,13 @@ function pullFeed(){
     // 关键修复：若本地还没有 rss 条目（如刚重装 PWA 首次拉取失败），必须持续重试，
     // 不能再因「今天已记过日期」就永久跳过，否则热点一整天都不出现。
     if(last===TODAY && hasRss) return;
-    fetch('/api/feed').then(function(r){ return r.json(); }).then(function(d){
+    // 关键：URL 带 ?ts= 时间戳，让 Service Worker 的 cache-first 永远 miss（URL 不同），
+    // 无论 SW 是新是旧都会走真实 network 请求，彻底绕过 SW 缓存的旧响应。
+    // 否则 iOS PWA 里旧 SW 缓存的「首次失败/空」响应会一直返回，热点永远不出现。
+    fetch('/api/feed?ts=' + Date.now(), { cache: 'no-store' }).then(function(r){
+      if(!r || !r.ok) throw new Error('http' + (r ? r.status : '?'));
+      return r.json();
+    }).then(function(d){
       if(d && d.items && d.items.length){
         d.items.forEach(function(it){
           if(!it.link) return;
@@ -3522,11 +3528,17 @@ function pullFeed(){
         });
         saveAll();
         if(VIEW==='learn') render();
+        if(hasRss===false) toast('已拉取 '+d.items.length+' 条热点','ok');
+      } else {
+        // 接口返回空（非失败）：提示一下，不锁死，下次还能重试
+        toast('热点接口暂无可推送内容','warn');
       }
       // 只有真正拿到数据才记今天日期，失败不记 → 下次还能重试
       localStorage.setItem('wb_slp_feeddate', TODAY);
-    }).catch(function(){
+    }).catch(function(err){
       // 拉取失败：不写日期，下次进入/切换仍会重试；已有 rss 也不强制重拉
+      // 明确提示，别再静默 0 条让用户以为是「没有」
+      toast('热点拉取失败，请检查网络后点「🔄 刷新」','warn');
     });
   }catch(e){ /* 异常也不写日期，留给下次重试 */ }
 }
