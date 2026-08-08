@@ -656,6 +656,35 @@ select.inp{-webkit-appearance:none;appearance:none;
 .ln-meta{font-size:12px;color:#94a3b8;margin:2px 0 8px}
 .ln-rss{border-left:3px solid #f59e0b}
 .ln-rss .ln-title{color:#0f172a}
+/* ============ 科研 ============ */
+.sec-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 14px}
+.sec-h h2{font-size:19px;font-weight:750;margin:0}
+.sec-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row-acts{display:flex;gap:6px;flex-wrap:nowrap;white-space:nowrap}
+.mut{color:var(--muted);font-size:13px}
+.res-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.res-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 15px;cursor:pointer;transition:.15s}
+.res-card:hover{box-shadow:var(--sh);border-color:var(--brand)}
+.res-card-t{font-weight:700;font-size:15.5px;margin-bottom:4px}
+.res-card-d{font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.res-card-m{font-size:12.5px;color:var(--faint)}
+.res-metrics{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px}
+.tbl-scroll{overflow-x:auto}
+table.dt{width:100%;border-collapse:collapse;font-size:13.5px;min-width:480px}
+table.dt th,table.dt td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+table.dt th{background:#f8fafc;font-weight:700;color:#475569;font-size:12.5px}
+table.dt tbody tr:hover{background:#f8fafc}
+.chart-block{padding:14px 16px;border-bottom:1px solid var(--border)}
+.chart-block:last-child{border-bottom:none}
+.chart-title{font-size:13.5px;font-weight:700;color:#334155;margin-bottom:8px}
+.cht-box{width:100%}
+.cht{display:block;width:100%;height:auto;max-height:260px}
+.cht-lg{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;font-size:12px;color:#64748b}
+.cht-lg span{display:inline-flex;align-items:center;gap:5px}
+.cht-lg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.chart-empty{color:var(--muted);font-size:13px;padding:10px 0}
+.ai-res{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;color:#334155;max-height:50vh;overflow:auto}
+.ai-res.err{color:#b91c1c;background:#fef2f2;border-color:#fecaca}
 </style>
 </head>
 <body>
@@ -735,6 +764,10 @@ select.inp{-webkit-appearance:none;appearance:none;
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>
       <span>学习库</span><span class="cnt" id="cLearn">0</span>
     </button>
+    <button class="nav-i" data-v="research" onclick="go('research')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7.5 14h9"/></svg>
+      <span>科研</span><span class="cnt" id="cRes">0</span>
+    </button>
   </nav>
   <div class="side-ft">数据存本机浏览器 · 可添加到主屏幕离线用</div>
 </aside>
@@ -774,7 +807,7 @@ select.inp{-webkit-appearance:none;appearance:none;
 /* ---------- keys ---------- */
 var K = {
   kids:'wb_slp_kids', sessions:'wb_slp_sessions', plans:'wb_slp_plans', pays:'wb_slp_pays',
-  lib:'wb_slp_lib', assess:'wb_slp_assess', books:'wb_slp_books', learn:'wb_slp_learn',
+  lib:'wb_slp_lib', assess:'wb_slp_assess', books:'wb_slp_books', learn:'wb_slp_learn', research:'wb_slp_research',
   cfg:'wb_slp_cfg', sync:'wb_slp_sync', seeded:'wb_slp_seeded', tipDismiss:'wb_slp_tipdismiss'
 };
 
@@ -818,6 +851,7 @@ function saveAll(){
   ok = save(K.assess,ASSESS) && ok;
   ok = save(K.books,BOOKS) && ok;
   ok = save(K.learn,LEARN) && ok;
+  ok = save(K.research,RESEARCH) && ok;
   ok = save(K.cfg,CFG) && ok;
   return ok;
 }
@@ -1497,7 +1531,7 @@ var ST_CLS   = {done:'dn', pending:'pd', leave:'lv', absent:'ab'};
 // 缴费按「疗程」计：一个疗程 N 节 = N 次缴费，逐节确认，不再区分挂号批次
 
 /* ---------- state ---------- */
-var KIDS=[], SESSIONS=[], PLANS=[], PAYS=[], LIB=[], ASSESS=[], BOOKS=[], LEARN=[], CFG={}, SYNC={};
+var KIDS=[], SESSIONS=[], PLANS=[], PAYS=[], LIB=[], ASSESS=[], BOOKS=[], LEARN=[], RESEARCH=[], CFG={}, SYNC={};
 var VIEW='kids';
 var F = { q:'', tag:'', status:'active' };          // 档案筛选
 var LF = { kid:'', status:'', from:'', to:'' };     // 课程筛选
@@ -1514,6 +1548,7 @@ function boot(){
   ASSESS   = load(K.assess, []);
   BOOKS    = load(K.books, []);
   LEARN    = load(K.learn, []);
+  RESEARCH = load(K.research, []);
   CFG      = load(K.cfg, {perCourse:10, waitAlertDays:30, countLeave:false, customTags:[]});
   SYNC     = load(K.sync, {});
   if(CFG.perCourse==null) CFG.perCourse=10;
@@ -2002,6 +2037,7 @@ function render(){
     + BOOKS.filter(function(b){ return b.status==='wait'; }).length;
   if(document.getElementById('cLib')) document.getElementById('cLib').textContent = ASSESS.length;
   if(document.getElementById('cLearn')) document.getElementById('cLearn').textContent = LEARN.filter(function(l){return l.status!=='done';}).length;
+  if(document.getElementById('cRes')) document.getElementById('cRes').textContent = RESEARCH.length;
   var el=document.getElementById('view');
   if(VIEW==='kids') el.innerHTML=viewKids();
   else if(VIEW==='logs') el.innerHTML=viewLogs();
@@ -2009,6 +2045,7 @@ function render(){
   else if(VIEW==='stat') el.innerHTML=viewStat();
   else if(VIEW==='assess') el.innerHTML=viewAssess();
   else if(VIEW==='learn') el.innerHTML=viewLearn();
+  else if(VIEW==='research') el.innerHTML=viewResearch();
   else el.innerHTML=viewAttend();
 }
 
@@ -3381,7 +3418,7 @@ function delPlan(pid){
    学习库（科普 / 新技能 / 文献 / 视频）
    ================================================================== */
 var LF2 = { q:'', cat:'', status:'', rss:false };
-var LEARN_CATS = ['科普','新技能','文献','视频'];
+var LEARN_CATS = ['科普','新技能','文献','视频','论文'];
 var LEARN_ST = { unread:'未读', reading:'在读', done:'已读' };
 function openSide(){ var s=document.getElementById('side'); if(s) s.classList.add('open'); var b=document.getElementById('sideBg'); if(b) b.classList.add('open'); }
 function closeSide(){ var s=document.getElementById('side'); if(s) s.classList.remove('open'); var b=document.getElementById('sideBg'); if(b) b.classList.remove('open'); }
@@ -4873,7 +4910,7 @@ function printReport(){
 function doExport(){
   var data={
     _app:'言语治疗工作台', _version:1, _exportedAt:new Date().toISOString(),
-    kids:KIDS, sessions:SESSIONS, plans:PLANS, pays:PAYS, lib:LIB, assess:ASSESS, books:BOOKS, learn:LEARN, cfg:CFG
+    kids:KIDS, sessions:SESSIONS, plans:PLANS, pays:PAYS, lib:LIB, assess:ASSESS, books:BOOKS, learn:LEARN, research:RESEARCH, cfg:CFG
   };
   var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   var url=URL.createObjectURL(blob);
@@ -4916,7 +4953,7 @@ function confirmImport(){
   var mode=segVal('imMode');
   if(mode==='replace'){
     if(!confirm('整体替换会清空当前设备上的全部数据，且无法撤销。\n\n确定继续吗？（建议先导出一份当前数据）')) return;
-    KIDS=d.kids||[]; SESSIONS=d.sessions||[]; PLANS=d.plans||[]; PAYS=d.pays||[]; LIB=d.lib||[]; ASSESS=d.assess||[]; BOOKS=d.books||[]; LEARN=d.learn||[];
+    KIDS=d.kids||[]; SESSIONS=d.sessions||[]; PLANS=d.plans||[]; PAYS=d.pays||[]; LIB=d.lib||[]; ASSESS=d.assess||[]; BOOKS=d.books||[]; LEARN=d.learn||[]; RESEARCH=d.research||[];
     if(d.cfg) CFG=d.cfg;
   }else{
     var mk={}; KIDS.forEach(function(k,i){ mk[k.id]=i; });
@@ -4935,6 +4972,8 @@ function confirmImport(){
     (d.books||[]).forEach(function(b){ if(mb[b.id]!=null) BOOKS[mb[b.id]]=b; else BOOKS.push(b); });
     var ml2={}; LEARN.forEach(function(l,i){ ml2[l.id]=i; });
     (d.learn||[]).forEach(function(l){ if(ml2[l.id]!=null) LEARN[ml2[l.id]]=l; else LEARN.push(l); });
+    var mr={}; RESEARCH.forEach(function(rr,i){ mr[rr.id]=i; });
+    (d.research||[]).forEach(function(rr){ if(mr[rr.id]!=null) RESEARCH[mr[rr.id]]=rr; else RESEARCH.push(rr); });
   }
   if(!saveAll || !save(K.kids,KIDS)){ }
   saveAll();
@@ -4985,10 +5024,259 @@ function clearAll(){
   if(!confirm('⚠️ 第 1 步确认\n\n即将清空全部数据：'+KIDS.length+' 份档案、'+SESSIONS.length+' 条课程记录、'+PLANS.length+' 条计划、'+LIB.length+' 份资料。\n\n此操作不可恢复。确定继续吗？')) return;
   var t=prompt('⚠️ 第 2 步确认\n\n这是最后一次机会。请输入「清空」两个字确认：','');
   if(t!=='清空'){ toast('输入不匹配，已取消操作'); return; }
-  KIDS=[]; SESSIONS=[]; PLANS=[]; PAYS=[]; LIB=[]; ASSESS=[]; BOOKS=[]; LEARN=[];
+  KIDS=[]; SESSIONS=[]; PLANS=[]; PAYS=[]; LIB=[]; ASSESS=[]; BOOKS=[]; LEARN=[]; RESEARCH=[];
   saveAll();
   localStorage.setItem(K.seeded,'1');
   closeMo(); render(); toast('全部数据已清空','ok');
+}
+
+/* ==================================================================
+   科研：数据集 + 对比看板（复用档案孩子作对象）
+   ================================================================== */
+var RES = { cur:null };
+var TP_ORDER = ['前测','基线','中测','干预中','后测','随访'];
+var CHR_COLORS = ['#0ea5e9','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+
+function researchGet(id){ for(var i=0;i<RESEARCH.length;i++) if(RESEARCH[i].id===id) return RESEARCH[i]; return null; }
+function tpIndex(tp){ var i=TP_ORDER.indexOf(tp); return i>=0?i:999; }
+function tpList(p){ var set={},arr=[]; (p.records||[]).forEach(function(r){ if(!set[r.tp]){ set[r.tp]=1; arr.push(r.tp); } }); arr.sort(function(a,b){ return tpIndex(a)-tpIndex(b); }); return arr; }
+function uniqueKids(p){ var m={},a=[]; (p.records||[]).forEach(function(r){ if(!m[r.kidId]){ m[r.kidId]=1; a.push(r.kidId); } }); return a; }
+function findRec(p,kidId,tp){ for(var i=0;i<(p.records||[]).length;i++){ if(p.records[i].kidId===kidId && p.records[i].tp===tp) return p.records[i]; } return null; }
+function meanOf(p,m,tpSet){ var sum=0,n=0; (p.records||[]).forEach(function(r){ if(tpSet.indexOf(r.tp)>=0 && r.values){ var v=r.values[m.id]; if(v!=null && v!=='' && !isNaN(Number(v))){ sum+=Number(v); n++; } } }); return n? sum/n : null; }
+function fmtNum(v){ return (Math.round(Number(v)*10)/10).toString(); }
+function copyText(t){ if(!t) return; try{ var ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('已复制','ok'); }catch(e){ toast('复制失败，请手动选择','err'); } }
+
+function viewResearch(){
+  if(RES.cur){ var p=researchGet(RES.cur); if(p) return viewResearchDetail(p); RES.cur=null; }
+  return researchListHTML();
+}
+function researchListHTML(){
+  var h='<div class="sec-h"><h2>科研台</h2><div class="sec-acts"><button class="btn pri sm" onclick="openResearchForm(null)">+ 新建研究项目</button></div></div>';
+  h+='<p class="mut" style="margin:-2px 0 14px">定义研究变量，选档案里的孩子作对象，按「前测/中测/后测」录入数据，自动生成对比图，可导出 CSV、用 AI 解读。</p>';
+  if(!RESEARCH.length){ h+='<div class="empty"><p>还没有研究项目</p><small>点上方「新建研究项目」开始</small></div>'; return h; }
+  h+='<div class="res-grid">';
+  RESEARCH.forEach(function(p){
+    var recN=(p.records||[]).length;
+    h+='<div class="res-card" onclick="RES.cur=\''+p.id+'\';render()">'+
+      '<div class="res-card-t">'+esc(p.name)+'</div>'+
+      (p.desc?'<div class="res-card-d">'+esc(p.desc)+'</div>':'')+
+      '<div class="res-card-m">变量 '+((p.metrics||[]).length)+' · 记录 '+recN+'</div>'+
+    '</div>';
+  });
+  h+='</div>';
+  return h;
+}
+function viewResearchDetail(p){
+  var h='<div class="sec-h"><button class="btn sm" onclick="RES.cur=null;render()">← 项目列表</button>'+
+    '<h2 style="margin-left:6px">'+esc(p.name)+'</h2>'+
+    '<div class="sec-acts"><button class="btn sm" onclick="openResearchForm(\''+p.id+'\')">编辑</button>'+
+    '<button class="btn sm dan" onclick="delResearch(\''+p.id+'\')">删除</button></div></div>';
+  if(p.desc) h+='<p class="mut" style="margin:-2px 0 12px">'+esc(p.desc)+'</p>';
+
+  h+='<div class="card"><div class="card-h"><span>研究变量</span><button class="btn pri sm" onclick="openMetricForm(\''+p.id+'\',null)">+ 变量</button></div>';
+  if(p.metrics && p.metrics.length){
+    h+='<div class="res-metrics">';
+    p.metrics.forEach(function(m){
+      h+='<span class="chip t3">'+esc(m.name)+(m.unit?' ('+esc(m.unit)+')':'')+' · '+(m.type==='num'?'数值':'文本')+
+        ' <a style="cursor:pointer;color:#0f766e" onclick="event.stopPropagation();openMetricForm(\''+p.id+'\',\''+m.id+'\')">✎</a>'+
+        ' <a style="cursor:pointer;color:#ef4444" onclick="event.stopPropagation();delMetric(\''+p.id+'\',\''+m.id+'\')">✕</a></span>';
+    });
+    h+='</div>';
+  } else {
+    h+='<div class="empty sm"><p>还没有变量</p><small>先添加要追踪的指标，如「平均语句长度 MLU」「正确率」</small></div>';
+  }
+  h+='</div>';
+
+  h+='<div class="sec-acts" style="margin:14px 0">'+
+    '<button class="btn pri" onclick="openRecordForm(\''+p.id+'\',null)">+ 录入一条数据</button>'+
+    '<button class="btn" onclick="exportResearchCSV(\''+p.id+'\')">导出 CSV</button>'+
+    '<button class="btn" onclick="aiResearch(\''+p.id+'\')">✨ AI 解读</button></div>';
+
+  h+=researchTableHTML(p);
+  h+=researchChartsHTML(p);
+  return h;
+}
+function researchTableHTML(p){
+  if(!p.metrics || !p.metrics.length) return '<div class="card"><div class="empty sm"><p>添加变量后才能录入与对比</p></div></div>';
+  if(!p.records || !p.records.length) return '<div class="card"><div class="empty sm"><p>还没有数据记录</p><small>点「录入一条数据」开始</small></div></div>';
+  var h='<div class="card"><div class="card-h"><span>数据记录（'+p.records.length+'）</span></div><div class="tbl-scroll"><table class="dt"><thead><tr><th>对象</th><th>时间点</th>';
+  p.metrics.forEach(function(m){ h+='<th>'+esc(m.name)+(m.unit?'<br><small>'+esc(m.unit)+'</small>':'')+'</th>'; });
+  h+='<th>备注</th><th></th></tr></thead><tbody>';
+  p.records.forEach(function(r){
+    h+='<tr><td>'+esc(kidName(r.kidId))+'</td><td>'+esc(r.tp)+'</td>';
+    p.metrics.forEach(function(m){ var v=r.values?r.values[m.id]:undefined; h+='<td>'+(v==null||v===''?'<span class="mut">—</span>':esc(v))+'</td>'; });
+    h+='<td class="mut">'+esc(r.note||'')+'</td>';
+    h+='<td class="row-acts"><button class="btn sm" onclick="openRecordForm(\''+p.id+'\',\''+r.id+'\')">编辑</button>'+
+       '<button class="btn sm dan" onclick="delRecord(\''+p.id+'\',\''+r.id+'\')">删</button></td></tr>';
+  });
+  h+='</tbody></table></div></div>';
+  return h;
+}
+function researchChartsHTML(p){
+  var numM=(p.metrics||[]).filter(function(m){ return m.type==='num'; });
+  if(!numM.length || !p.records || !p.records.length) return '';
+  var tps=tpList(p);
+  var h='<div class="card"><div class="card-h"><span>对比看板</span></div>';
+  numM.forEach(function(m){
+    var series=[]; var kids=uniqueKids(p);
+    kids.forEach(function(kidId, idx){
+      var vals=tps.map(function(tp){ var rec=findRec(p,kidId,tp); if(!rec) return null; var v=rec.values?rec.values[m.id]:undefined; return (v==null||v===''||isNaN(Number(v)))?null:Number(v); });
+      series.push({name:kidName(kidId), color:CHR_COLORS[idx%CHR_COLORS.length], vals:vals});
+    });
+    h+='<div class="chart-block"><div class="chart-title">'+esc(m.name)+(m.unit?'（'+esc(m.unit)+'）':'')+' · 各对象趋势</div>';
+    h+=svgLineChart(tps, series);
+    var pre=meanOf(p,m,['前测','基线']), post=meanOf(p,m,['后测','随访']);
+    if(pre!=null || post!=null){ h+='<div class="chart-title" style="margin-top:10px">'+esc(m.name)+' · 前测 vs 后测（均值）</div>'; h+=svgPrePost(pre,post,m.unit); }
+    h+='</div>';
+  });
+  h+='</div>';
+  return h;
+}
+function svgLineChart(labels, series){
+  var W=660,H=240,padL=40,padR=16,padT=14,padB=30; var iw=W-padL-padR, ih=H-padT-padB;
+  var allv=[]; series.forEach(function(s){ s.vals.forEach(function(v){ if(v!=null && !isNaN(v)) allv.push(v); }); });
+  if(!allv.length) return '<div class="chart-empty">暂无数值数据</div>';
+  var maxV=Math.max.apply(null,allv), minV=Math.min.apply(null,allv);
+  if(maxV===minV){ maxV+=1; if(minV>0) minV-=1; else minV=0; }
+  var n=labels.length;
+  function X(i){ return padL + (n<=1?iw/2:iw*i/(n-1)); }
+  function Y(v){ return padT + ih - (v-minV)/(maxV-minV)*ih; }
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" class="cht" preserveAspectRatio="xMidYMid meet">';
+  var ticks=4;
+  for(var t=0;t<=ticks;t++){ var val=minV+(maxV-minV)*t/ticks; var y=Y(val); svg+='<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="#eef2f7"/>'; svg+='<text x="'+(padL-5)+'" y="'+(y+3)+'" font-size="9" fill="#94a3b8" text-anchor="end">'+fmtNum(val)+'</text>'; }
+  for(var i=0;i<n;i++){ svg+='<text x="'+X(i)+'" y="'+(H-11)+'" font-size="9" fill="#64748b" text-anchor="middle">'+esc(labels[i]||'')+'</text>'; }
+  series.forEach(function(s){ var d='', started=false; for(var i=0;i<n;i++){ var v=s.vals[i]; if(v==null||isNaN(v)) continue; d+=(started?'L':'M')+X(i)+' '+Y(v)+' '; started=true; } if(d){ svg+='<path d="'+d+'" fill="none" stroke="'+s.color+'" stroke-width="2" stroke-linejoin="round"/>'; } for(var j=0;j<n;j++){ var v2=s.vals[j]; if(v2==null||isNaN(v2)) continue; svg+='<circle cx="'+X(j)+'" cy="'+Y(v2)+'" r="3" fill="'+s.color+'"/>'; } });
+  svg+='</svg>';
+  var lg='<div class="cht-lg">'+series.map(function(s){ return '<span><i style="background:'+s.color+'"></i>'+esc(s.name)+'</span>'; }).join('')+'</div>';
+  return '<div class="cht-box">'+svg+lg+'</div>';
+}
+function svgPrePost(pre,post,unit){
+  var vals=[pre,post].filter(function(v){ return v!=null; }); if(!vals.length) return '';
+  var maxV=Math.max.apply(null,vals); if(maxV<=0) maxV=1;
+  var W=300,H=120,padB=22,padT=12,padL=10,padR=10,bw=54,gap=34;
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" class="cht" preserveAspectRatio="xMidYMid meet">';
+  var bars=[{l:'前测',v:pre,c:'#94a3b8'},{l:'后测',v:post,c:'#0ea5e9'}]; var x=padL;
+  bars.forEach(function(b){ if(b.v==null){ x+=bw+gap; return; } var bh=(b.v/maxV)*(H-padB-padT); var y=H-padB-bh; svg+='<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+bh+'" rx="3" fill="'+b.c+'"/>'; svg+='<text x="'+(x+bw/2)+'" y="'+(y-4)+'" font-size="10" fill="#334155" text-anchor="middle">'+fmtNum(b.v)+'</text>'; svg+='<text x="'+(x+bw/2)+'" y="'+(H-7)+'" font-size="9" fill="#64748b" text-anchor="middle">'+b.l+'</text>'; x+=bw+gap; });
+  svg+='</svg>';
+  return '<div class="cht-box">'+svg+(unit?'<div class="cht-lg"><span>单位：'+esc(unit)+'</span></div>':'')+'</div>';
+}
+function openResearchForm(id){
+  var p=id?researchGet(id):null;
+  var html='<div class="fg"><label>项目名称</label><input id="rName" class="fin" value="'+esc(p?p.name:'')+'" placeholder="如：口部运动训练对构音障碍的疗效">'+
+    '<label>说明（可选）</label><textarea id="rDesc" class="farea" rows="3" placeholder="研究目的、设计、纳入标准…">'+esc(p?p.desc:'')+'</textarea></div>';
+  showMo(id?'编辑研究项目':'新建研究项目', html, '<button class="btn" onclick="closeMo()">取消</button><button class="btn pri" onclick="saveResearch(\''+id+'\')">保存</button>', 'wide');
+}
+function saveResearch(id){
+  var name=document.getElementById('rName').value.trim();
+  if(!name){ toast('请填写项目名称','err'); return; }
+  var desc=document.getElementById('rDesc').value.trim();
+  if(id){ var p=researchGet(id); if(p){ p.name=name; p.desc=desc; } }
+  else { RESEARCH.push({id:uid(), name:name, desc:desc, metrics:[], records:[], createdAt:TODAY}); }
+  saveAll(); closeMo(); render(); toast('已保存','ok');
+}
+function delResearch(id){
+  if(!confirm('删除该研究项目及其全部变量与数据记录？此操作不可恢复。')) return;
+  RESEARCH=RESEARCH.filter(function(p){ return p.id!==id; });
+  if(RES.cur===id) RES.cur=null;
+  saveAll(); closeMo(); render(); toast('已删除','ok');
+}
+function openMetricForm(pid, mid){
+  var p=researchGet(pid); if(!p) return;
+  var m=mid?(function(){ for(var i=0;i<p.metrics.length;i++) if(p.metrics[i].id===mid) return p.metrics[i]; return null; })():null;
+  var html='<div class="fg"><label>变量名</label><input id="mName" class="fin" value="'+esc(m?m.name:'')+'" placeholder="如：平均语句长度 MLU">'+
+    '<label>单位（可选）</label><input id="mUnit" class="fin" value="'+esc(m?m.unit:'')+'" placeholder="如：词、%、分">'+
+    '<label>类型</label><select id="mType" class="fsel"><option value="num"'+((!m||m.type==='num')?' selected':'')+'>数值（用于画图/统计）</option><option value="text"'+((m&&m.type==='text')?' selected':'')+'>文本（仅记录）</option></select></div>';
+  showMo(mid?'编辑变量':'添加变量', html, '<button class="btn" onclick="closeMo()">取消</button><button class="btn pri" onclick="saveMetric(\''+pid+'\',\''+mid+'\')">保存</button>', 'narrow');
+}
+function saveMetric(pid, mid){
+  var name=document.getElementById('mName').value.trim();
+  if(!name){ toast('请填写变量名','err'); return; }
+  var unit=document.getElementById('mUnit').value.trim();
+  var type=document.getElementById('mType').value;
+  var p=researchGet(pid); if(!p) return;
+  if(mid){ for(var i=0;i<p.metrics.length;i++) if(p.metrics[i].id===mid){ p.metrics[i].name=name; p.metrics[i].unit=unit; p.metrics[i].type=type; } }
+  else { p.metrics.push({id:uid(), name:name, unit:unit, type:type}); }
+  saveAll(); closeMo(); render(); toast('已保存','ok');
+}
+function delMetric(pid, mid){
+  if(!confirm('删除该变量？已录入的对应数据会一并清除。')) return;
+  var p=researchGet(pid); if(!p) return;
+  p.metrics=p.metrics.filter(function(m){ return m.id!==mid; });
+  (p.records||[]).forEach(function(r){ if(r.values) delete r.values[mid]; });
+  saveAll(); closeMo(); render(); toast('已删除','ok');
+}
+function openRecordForm(pid, rid){
+  var p=researchGet(pid); if(!p) return;
+  if(!p.metrics || !p.metrics.length){ toast('请先添加研究变量','err'); return; }
+  if(!KIDS.length || !KIDS.some(function(k){ return k.status!=='archived'; })){ toast('请先在「档案」里添加孩子作为研究对象','err'); return; }
+  var r=rid?(function(){ for(var i=0;i<p.records.length;i++) if(p.records[i].id===rid) return p.records[i]; return null; })():null;
+  var opts=KIDS.filter(function(k){ return k.status!=='archived'; }).map(function(k){ return '<option value="'+k.id+'"'+((r&&r.kidId===k.id)?' selected':'')+'>'+esc(k.name)+'</option>'; }).join('');
+  var tpOpts=['前测','基线','中测','干预中','后测','随访'].map(function(t){ return '<option value="'+t+'"'+((r&&r.tp===t)?' selected':'')+'>'+t+'</option>'; }).join('');
+  var html='<div class="fg"><label>研究对象（孩子）</label><select id="rrKid" class="fsel">'+opts+'</select>'+
+    '<label>时间点</label><input id="rrTp" class="fin" list="rrtpList" value="'+esc(r?r.tp:'前测')+'" placeholder="前测/中测/后测…">'+
+    '<datalist id="rrtpList">'+tpOpts+'</datalist>';
+  (p.metrics||[]).forEach(function(m){
+    var v=r&&r.values?r.values[m.id]:'';
+    html+='<label>'+esc(m.name)+(m.unit?'（'+esc(m.unit)+'）':'')+'</label>'+
+      (m.type==='num'
+        ? '<input id="rrv_'+m.id+'" class="fin" type="number" step="any" value="'+esc(v)+'">'
+        : '<input id="rrv_'+m.id+'" class="fin" value="'+esc(v)+'">');
+  });
+  html+='<label>备注（可选）</label><textarea id="rrNote" class="farea" rows="2" placeholder="情境、特殊说明…">'+esc(r?r.note:'')+'</textarea></div>';
+  showMo(rid?'编辑数据':'录入数据', html, '<button class="btn" onclick="closeMo()">取消</button><button class="btn pri" onclick="saveRecord(\''+pid+'\',\''+rid+'\')">保存</button>', 'wide');
+}
+function saveRecord(pid, rid){
+  var p=researchGet(pid); if(!p) return;
+  var kidId=document.getElementById('rrKid').value;
+  var tp=document.getElementById('rrTp').value.trim();
+  if(!kidId){ toast('请选择研究对象','err'); return; }
+  if(!tp){ toast('请填写时间点','err'); return; }
+  var values={}; (p.metrics||[]).forEach(function(m){ var el=document.getElementById('rrv_'+m.id); if(el) values[m.id]=el.value; });
+  var note=document.getElementById('rrNote').value.trim();
+  if(rid){ for(var i=0;i<p.records.length;i++) if(p.records[i].id===rid){ p.records[i].kidId=kidId; p.records[i].tp=tp; p.records[i].values=values; p.records[i].note=note; } }
+  else { p.records.push({id:uid(), kidId:kidId, tp:tp, values:values, note:note, date:TODAY}); }
+  saveAll(); closeMo(); render(); toast('已保存','ok');
+}
+function delRecord(pid, rid){
+  if(!confirm('删除这条数据记录？')) return;
+  var p=researchGet(pid); if(!p) return;
+  p.records=p.records.filter(function(r){ return r.id!==rid; });
+  saveAll(); closeMo(); render(); toast('已删除','ok');
+}
+function exportResearchCSV(pid){
+  var p=researchGet(pid); if(!p) return;
+  var cols=['对象','时间点','日期','备注']; (p.metrics||[]).forEach(function(m){ cols.push(m.name+(m.unit?'('+m.unit+')':'')); });
+  var rows=[cols];
+  (p.records||[]).slice().sort(function(a,b){ return tpIndex(a.tp)-tpIndex(b.tp); }).forEach(function(r){
+    var row=[kidName(r.kidId), r.tp, r.date||'', r.note||''];
+    (p.metrics||[]).forEach(function(m){ row.push(r.values?r.values[m.id]:''); });
+    rows.push(row);
+  });
+  var csv=rows.map(function(r){ return r.map(function(c){ return '"'+String(c==null?'':c).replace(/"/g,'""')+'"'; }).join(','); }).join('\r\n');
+  var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=url; a.download='科研_'+p.name+'_'+TODAY+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); },1200);
+  toast('CSV 已导出（'+(rows.length-1)+' 行）','ok');
+}
+function aiResearch(pid){
+  var p=researchGet(pid); if(!p) return;
+  if(!p.records || !p.records.length){ toast('请先录入数据再让 AI 解读','err'); return; }
+  var txt='你是儿童言语语言治疗领域的科研助手。下面是研究项目《'+p.name+'》的数据摘要：\n';
+  if(p.desc) txt+='研究说明：'+p.desc+'\n';
+  (p.metrics||[]).forEach(function(m){
+    txt+='\n变量：'+m.name+(m.unit?'（'+m.unit+'）':'')+' ['+(m.type==='num'?'数值':'文本')+']\n';
+    (p.records||[]).forEach(function(r){ var v=r.values?r.values[m.id]:''; txt+='- '+kidName(r.kidId)+' @'+r.tp+': '+(v==null||v===''?'（空）':v)+(r.note?(' 备注:'+r.note):'')+'\n'; });
+  });
+  txt+='\n请基于以上数据，给出：1) 各对象前后变化的解读；2) 可能的疗效趋势；3) 研究设计局限与下一步建议。用中文、条理清晰。';
+  showMo('✨ AI 解读《'+p.name+'》', '<div id="aiResBox" class="ai-res" style="white-space:pre-wrap;line-height:1.7">正在分析数据…</div>',
+    '<button class="btn" onclick="closeMo()">关闭</button><button class="btn pri" onclick="copyText(document.getElementById(\'aiResBox\').textContent)">复制结果</button>', 'wide');
+  aiRawCall([{role:'user',content:txt}], function(ok, res){
+    var box=document.getElementById('aiResBox'); if(!box) return;
+    if(!ok){ box.className='ai-res err'; box.textContent='⚠️ '+res; return; }
+    box.className='ai-res'; box.textContent=res;
+  });
 }
 
 /* ---------- go ---------- */
