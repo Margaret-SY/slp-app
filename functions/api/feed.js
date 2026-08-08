@@ -2,7 +2,7 @@
 // 文件路径：functions/api/feed.js
 // 服务端抓取：
 //   ① Bing News RSS（中文关键词，聚焦 技能/干预/研究/循证）
-//   ② PubMed E-utilities（真实学术论文，标题+摘要+原文链接，分类「论文」）
+//   ② Europe PMC + OpenAlex（真实学术论文，标题+摘要+原文链接，分类「论文」；NCBI 封 CF 故不用）
 //   ③ Google News（兜底，常被 503 封锁，失败即忽略）
 //   ④ ScienceDaily（英文健康兜底，保证不空军）
 // 解决：① 浏览器跨域(CORS) ② 国内网络无法直接访问（函数在 Cloudflare 境外边缘执行，用户经 pages.dev 间接拿到）。
@@ -36,40 +36,85 @@ export async function onRequest(context) {
       .catch(function (e) { diag.push({ src: label, kw: kw, err: String(e && e.message ? e.message : e), got: 0 }); return []; });
   }
 
-  // PubMed：每个关键词先 esearch 拿 id，再一次性 efetch 解析（减少请求数，避免限流）
-  function pubmedAll() {
-    return Promise.all(pubmedKw.map(function (term) {
-      var u = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=4&term=' + encodeURIComponent(term);
-      return fetch(u, { headers: { 'User-Agent': UA } })
-        .then(function (r) { return r.json(); })
-        .then(function (j) {
-          var ids = (j.esearchresult && j.esearchresult.idlist) || [];
-          return ids.map(function (id) { return { id: id, term: term }; });
-        })
-        .catch(function () { return []; });
-    })).then(function (lists) {
-      var flat = [];
-      lists.forEach(function (l) { flat = flat.concat(l); });
-      if (!flat.length) { diag.push({ src: 'pubmed', kw: '__all__', err: null, got: 0 }); return []; }
-      var idStr = flat.map(function (x) { return x.id; }).join(',');
-      var fUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&retmode=xml&id=' + idStr;
-      return fetch(fUrl, { headers: { 'User-Agent': UA } }).then(function (r) { return r.text(); }).then(function (xml) {
-        var arts = xml.match(/<PubmedArticle>[\s\S]*?<\/PubmedArticle>/gi) || [];
-        var map = {}; flat.forEach(function (x) { map[x.id] = x.term; });
-        var out = [];
-        for (var i = 0; i < arts.length && out.length < 16; i++) {
-          var a = arts[i];
-          var pmid = clean(grab(a, 'PMID'));
-          var title = clean(grab(a, 'ArticleTitle'));
-          var abs = clean(grab(a, 'AbstractText')).slice(0, 200);
-          var jour = clean(grab(a, 'Title'));
-          var year = clean(grab(a, 'Year'));
-          if (title && pmid) out.push({ title: title, link: 'https://pubmed.ncbi.nlm.nih.gov/' + pmid + '/', desc: abs, source: 'PubMed·' + jour, date: year, kw: map[pmid] || '论文', cat: '论文', ts: Date.now() - i });
+  // 论文源：Europe PMC（EBI，生物医学，带摘要，对数据中心 IP 友好）+ OpenAlex（开放备份）
+  // 注：PubMed(NCBI) 会封 Cloudflare 边缘 IP，故不用；这两个 API 专为程序化访问设计。
+  function paperAll() {
+    var tasks = [];
+    pubmedKw.forEach(function (term) {
+      tasks.push(epmcSearch(term));
+      tasks.push(openalexSearch(term));
+    });
+    return Promise.all(tasks).then(function (lists) {
+      var out = [];
+      var seen = {};
+      for (var i = 0; i < lists.length; i++) {
+        var arr = lists[i] || [];
+        for (var j = 0; j < arr.length; j++) {
+          var it = arr[j];
+          var key = it.link || it.title;
+          if (key && !seen[key]) { seen[key] = 1; out.push(it); }
         }
-        diag.push({ src: 'pubmed', kw: '__all__', err: null, got: out.length });
-        return out;
-      }).catch(function (e) { diag.push({ src: 'pubmed', kw: '__all__', err: String(e), got: 0 }); return []; });
+      }
+      return out;
     }).catch(function () { return []; });
+  }
+
+  function epmcSearch(term) {
+    var u = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=' + encodeURIComponent(term) + '&format=json&pageSize=4&resultType=core';
+    return fetch(u, { headers: { 'User-Agent': UA, 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var res = (j.resultList && j.resultList.result) || [];
+        var out = [];
+        for (var i = 0; i < res.length && out.length < 4; i++) {
+          var x = res[i];
+          var title = clean(x.title || '');
+          if (!title) continue;
+          var abs = clean(x.abstractText || '').slice(0, 200);
+          var doi = x.doi || '';
+          var src = x.source || '';
+          var id = x.id || '';
+          var link = doi ? ('https://doi.org/' + doi) : ('https://europepmc.org/article/' + src + '/' + id);
+          var yr = x.firstPublicationDate || x.pubYear || '';
+          var jour = (x.journalInfo && x.journalInfo.journal && x.journalInfo.journal.title) || '文献';
+          out.push({ title: title, link: link, desc: abs, source: 'EuropePMC·' + jour, date: yr, kw: term, cat: '论文', ts: Date.now() - i });
+        }
+        diag.push({ src: 'epmc', kw: term, err: null, got: out.length });
+        return out;
+      })
+      .catch(function (e) { diag.push({ src: 'epmc', kw: term, err: String(e && e.message ? e.message : e), got: 0 }); return []; });
+  }
+
+  function openalexSearch(term) {
+    var u = 'https://api.openalex.org/works?search=' + encodeURIComponent(term) + '&per_page=4&select=title,abstract_inverted_index,doi,publication_year,primary_location';
+    return fetch(u, { headers: { 'User-Agent': UA } })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var res = j.results || [];
+        var out = [];
+        for (var i = 0; i < res.length && out.length < 4; i++) {
+          var x = res[i];
+          var title = clean(x.title || '');
+          if (!title) continue;
+          var abs = clean(reconstructAbstract(x.abstract_inverted_index)).slice(0, 200);
+          var doi = x.doi || '';
+          var loc = (x.primary_location && x.primary_location.landing_page_url) || '';
+          var link = doi ? ('https://doi.org/' + doi) : (loc || x.id);
+          out.push({ title: title, link: link, desc: abs, source: 'OpenAlex', date: String(x.publication_year || ''), kw: term, cat: '论文', ts: Date.now() - i });
+        }
+        diag.push({ src: 'openalex', kw: term, err: null, got: out.length });
+        return out;
+      })
+      .catch(function (e) { diag.push({ src: 'openalex', kw: term, err: String(e && e.message ? e.message : e), got: 0 }); return []; });
+  }
+
+  function reconstructAbstract(idx) {
+    if (!idx) return '';
+    var max = 0, w;
+    for (w in idx) { var arr = idx[w]; for (var m = 0; m < arr.length; m++) if (arr[m] > max) max = arr[m]; }
+    var a = new Array(max + 1);
+    for (w in idx) { var pos = idx[w]; for (var n = 0; n < pos.length; n++) a[pos[n]] = w; }
+    return (a.join(' ') || '').replace(/\s+/g, ' ').trim();
   }
 
   var tasks = [];
@@ -80,7 +125,7 @@ export async function onRequest(context) {
 
   var newsRes, pmRes;
   try { newsRes = await Promise.all(tasks); } catch (e) { newsRes = []; }
-  try { pmRes = await pubmedAll(); } catch (e) { pmRes = []; }
+  try { pmRes = await paperAll(); } catch (e) { pmRes = []; }
 
   var items = [];
   var seen = {};
