@@ -1,7 +1,7 @@
 /* 言语治疗工作台 · 离线缓存 Service Worker
    作用：首次联网打开后，之后断网也能打开；数据存在各设备浏览器本地。
    注意：本 SW 只缓存“程序外壳”，不缓存任何业务数据（数据在 localStorage）。 */
-var CACHE = 'slp-v9';
+var CACHE = 'slp-v10';
 var ASSETS = [
   './',
   './index.html',
@@ -44,6 +44,19 @@ self.addEventListener('fetch', function (e) {
   }
 
   // 其他静态资源：缓存优先，未命中再联网并缓存
+  // 关键：API 请求（/api/）永远走 network，不读 SW 缓存也不写 SW 缓存。
+  // 否则首次 SW 拦截到的失败 / 空 / 旧响应会一直返回，导致热点永远不更新。
+  // 离线下返回空 JSON，让前端走「失败不锁死」逻辑，下次联网再重试。
+  var url = (req.url || '');
+  if (url.indexOf('/api/') >= 0) {
+    e.respondWith(
+      fetch(req).catch(function () {
+        return new Response('{"items":[],"count":0,"_err":"offline"}',
+          { headers: { 'Content-Type': 'application/json' } });
+      })
+    );
+    return;
+  }
   e.respondWith(
     caches.match(req).then(function (cached) {
       if (cached) return cached;
