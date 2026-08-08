@@ -3487,7 +3487,7 @@ function delPlan(pid){
    学习库（科普 / 新技能 / 文献 / 视频）
    ================================================================== */
 var LF2 = { q:'', cat:'', status:'', rss:false };
-var LEARN_CATS = ['科普','新技能','文献','视频','论文'];
+var LEARN_CATS = ['科普','新技能','文献','视频','论文','热点'];
 var LEARN_ST = { unread:'未读', reading:'在读', done:'已读' };
 function openSide(){ var s=document.getElementById('side'); if(s) s.classList.add('open'); var b=document.getElementById('sideBg'); if(b) b.classList.add('open'); }
 function closeSide(){ var s=document.getElementById('side'); if(s) s.classList.remove('open'); var b=document.getElementById('sideBg'); if(b) b.classList.remove('open'); }
@@ -3503,7 +3503,11 @@ document.addEventListener('click', function(e){
 function pullFeed(){
   try{
     var last=localStorage.getItem('wb_slp_feeddate');
-    if(last===TODAY) return;
+    var hasRss=LEARN.some(function(l){ return l.addedBy==='rss'; });
+    // 今天已成功拉过、且本地已有 rss 条目 → 跳过，避免反复请求
+    // 关键修复：若本地还没有 rss 条目（如刚重装 PWA 首次拉取失败），必须持续重试，
+    // 不能再因「今天已记过日期」就永久跳过，否则热点一整天都不出现。
+    if(last===TODAY && hasRss) return;
     fetch('/api/feed').then(function(r){ return r.json(); }).then(function(d){
       if(d && d.items && d.items.length){
         d.items.forEach(function(it){
@@ -3511,7 +3515,7 @@ function pullFeed(){
           var has=LEARN.some(function(l){ return l.addedBy==='rss' && l.link===it.link; });
           if(!has){
             LEARN.unshift({ id:'rss'+Date.now()+Math.floor(Math.random()*1e4),
-              title:it.title, cat:'热点', tags:[it.kw||'热点'], src:'', body:it.desc||'',
+              title:it.title, cat:(it.cat||'热点'), tags:[it.kw||'热点'], src:'', body:it.desc||'',
               status:'unread', fav:false, addedBy:'rss', source:it.source||'', link:it.link,
               rssDate:it.date||'', createdAt:TODAY });
           }
@@ -3519,9 +3523,12 @@ function pullFeed(){
         saveAll();
         if(VIEW==='learn') render();
       }
+      // 只有真正拿到数据才记今天日期，失败不记 → 下次还能重试
       localStorage.setItem('wb_slp_feeddate', TODAY);
-    }).catch(function(){ localStorage.setItem('wb_slp_feeddate', TODAY); });
-  }catch(e){ try{ localStorage.setItem('wb_slp_feeddate', TODAY); }catch(e2){} }
+    }).catch(function(){
+      // 拉取失败：不写日期，下次进入/切换仍会重试；已有 rss 也不强制重拉
+    });
+  }catch(e){ /* 异常也不写日期，留给下次重试 */ }
 }
 function viewLearn(){
   var list = learnList();
@@ -5398,7 +5405,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.08-8';
+var APP_VER='2026.08.08-9';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
