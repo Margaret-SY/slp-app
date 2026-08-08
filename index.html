@@ -5424,7 +5424,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.08-13';
+var APP_VER='2026.08.08-14';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
@@ -5449,13 +5449,16 @@ function applyGapFallback(){
 
 /* 一键强制更新：注销 SW + 清空所有缓存 + 换 URL 重载（绕过 iOS 顽固缓存） */
 function forceUpdate(){
+  try{ if(sessionStorage.getItem('slp_forcing')==='1') return; }catch(e){}
+  try{ sessionStorage.setItem('slp_forcing','1'); }catch(e){}
   try{ toast('正在获取最新版本…','ok'); }catch(e){}
   var fired=false;
   function done(){
     if(fired) return; fired=true;
     var base=location.pathname.replace(/[?#].*$/,'');
-    try{ location.replace(base+'?v='+Date.now()); }
-    catch(e){ location.href=base+'?v='+Date.now(); }
+    var nv=base+'?v='+APP_VER+'&t='+Date.now();
+    try{ window.top.location.href=nv; }
+    catch(e){ try{ window.location.href=nv; }catch(e2){ try{ location.replace(nv); }catch(e3){} } }
   }
   var jobs=[];
   try{
@@ -5478,22 +5481,29 @@ function forceUpdate(){
   } else { done(); }
 }
 
-/* 静默检查线上版本号；有新版就弹底部横幅（不打断当前操作） */
+/* 静默检查线上版本号；用 XHR（iOS12 fetch 的 cache 选项会直接 reject，XHR 最稳）。
+   发现新版直接自动强刷——不等用户点按钮，因为 iOS12 PWA 的按钮经常点不动。 */
 function autoCheckUpdate(){
   try{
-    if(!window.fetch) return;
     var host=location.hostname||'';
     if(host==='localhost'||host==='127.0.0.1'||host==='') return;
     var url=location.pathname.replace(/[?#].*$/,'')+'?vc='+Date.now();
-    fetch(url).then(function(r){ return r.text(); }).then(function(txt){
+    var x=new XMLHttpRequest();
+    x.open('GET', url, true);
+    x.onreadystatechange=function(){
+      if(x.readyState!==4) return;
+      if(x.status!==200 && x.status!==0) return;
+      var txt=x.responseText||'';
       var m=txt.match(/APP_VER\s*=\s*'([^']+)'/);
       if(m && m[1] && m[1]!==APP_VER){
         var bar=document.getElementById('updBar');
         var t=document.getElementById('updTxt');
         if(t) t.textContent='发现新版本 '+m[1]+'（当前 '+APP_VER+'）';
         if(bar) bar.classList.add('on');
+        forceUpdate(); /* iOS12：自动强刷，不依赖点按钮 */
       }
-    })['catch'](function(){});
+    };
+    x.send();
   }catch(e){}
 }
 
