@@ -3610,7 +3610,7 @@ function openLearnForm(id){
     '</div>';
   showMo(isNew?'新建学习条目':'编辑学习条目', html,
     '<button class="btn" onclick="closeMo()">取消</button>'+
-    '<button class="btn pri" onclick="saveLearn(\''+id+'\')">保存</button>', 'wide');
+    '<button class="btn pri" onclick="saveLearn('+(id?"'"+id+"'":'null')+')">保存</button>', 'wide');
 }
 function saveLearn(id){
   var title=document.getElementById('lnTitle').value.trim();
@@ -5235,7 +5235,7 @@ function openResearchForm(id){
   var p=id?researchGet(id):null;
   var html='<div class="fg"><label>项目名称</label><input id="rName" class="fin" value="'+esc(p?p.name:'')+'" placeholder="如：口部运动训练对构音障碍的疗效">'+
     '<label>说明（可选）</label><textarea id="rDesc" class="farea" rows="3" placeholder="研究目的、设计、纳入标准…">'+esc(p?p.desc:'')+'</textarea></div>';
-  showMo(id?'编辑研究项目':'新建研究项目', html, '<button class="btn" onclick="closeMo()">取消</button><button class="btn pri" onclick="saveResearch(\''+id+'\')">保存</button>', 'wide');
+  showMo(id?'编辑研究项目':'新建研究项目', html, '<button class="btn" onclick="closeMo()">取消</button><button class="btn pri" onclick="saveResearch('+(id?"'"+id+"'":'null')+')">保存</button>', 'wide');
 }
 function saveResearch(id){
   var name=document.getElementById('rName').value.trim();
@@ -5259,7 +5259,7 @@ function openMetricForm(pid, mid){
   var html='<div class="fg"><label>变量名</label><input id="mName" class="fin" value="'+esc(m?m.name:'')+'" placeholder="如：平均语句长度 MLU">'+
     '<label>单位（可选）</label><input id="mUnit" class="fin" value="'+esc(m?m.unit:'')+'" placeholder="如：词、%、分">'+
     '<label>类型</label><select id="mType" class="fsel"><option value="num"'+((!m||m.type==='num')?' selected':'')+'>数值（用于画图/统计）</option><option value="text"'+((m&&m.type==='text')?' selected':'')+'>文本（仅记录）</option></select></div>';
-  showMo(mid?'编辑变量':'添加变量', html, '<button class="btn" onclick="closeMo()">取消</button><button class="btn pri" onclick="saveMetric(\''+pid+'\',\''+mid+'\')">保存</button>', 'narrow');
+  showMo(mid?'编辑变量':'添加变量', html, '<button class="btn" onclick="closeMo()">取消</button><button class="btn pri" onclick="saveMetric(\''+pid+'\','+(mid?"'"+mid+"'":'null')+')">保存</button>', 'narrow');
 }
 function saveMetric(pid, mid){
   var name=document.getElementById('mName').value.trim();
@@ -5296,7 +5296,7 @@ function openRecordForm(pid, rid){
         : '<input id="rrv_'+m.id+'" class="fin" value="'+esc(v)+'">');
   });
   html+='<label>备注（可选）</label><textarea id="rrNote" class="farea" rows="2" placeholder="情境、特殊说明…">'+esc(r?r.note:'')+'</textarea></div>';
-  showMo(rid?'编辑数据':'录入数据', html, '<button class="btn" onclick="closeMo()">取消</button><button class="btn pri" onclick="saveRecord(\''+pid+'\',\''+rid+'\')">保存</button>', 'wide');
+  showMo(rid?'编辑数据':'录入数据', html, '<button class="btn" onclick="closeMo()">取消</button><button class="btn pri" onclick="saveRecord(\''+pid+'\','+(rid?"'"+rid+"'":'null')+')">保存</button>', 'wide');
 }
 function saveRecord(pid, rid){
   var p=researchGet(pid); if(!p) return;
@@ -5356,7 +5356,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.08-5';
+var APP_VER='2026.08.08-6';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
