@@ -3511,7 +3511,7 @@ function pullFeed(){
     // 关键：URL 带 ?ts= 时间戳，让 Service Worker 的 cache-first 永远 miss（URL 不同），
     // 无论 SW 是新是旧都会走真实 network 请求，彻底绕过 SW 缓存的旧响应。
     // 否则 iOS PWA 里旧 SW 缓存的「首次失败/空」响应会一直返回，热点永远不出现。
-    fetch('/api/feed?ts=' + Date.now(), { cache: 'no-store' }).then(function(r){
+    fetch('/api/feed?ts=' + Date.now()).then(function(r){
       if(!r || !r.ok) throw new Error('http' + (r ? r.status : '?'));
       return r.json();
     }).then(function(d){
@@ -3538,7 +3538,7 @@ function pullFeed(){
     }).catch(function(err){
       // 拉取失败：不写日期，下次进入/切换仍会重试；已有 rss 也不强制重拉
       // 明确提示，别再静默 0 条让用户以为是「没有」
-      toast('热点拉取失败，请检查网络后点「🔄 刷新」','warn');
+      toast('热点拉取失败（'+(err&&err.message?err.message:'')+'），点🔄刷新重试','warn');
     });
   }catch(e){ /* 异常也不写日期，留给下次重试 */ }
 }
@@ -5424,7 +5424,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.08-12';
+var APP_VER='2026.08.08-13';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
@@ -5485,7 +5485,7 @@ function autoCheckUpdate(){
     var host=location.hostname||'';
     if(host==='localhost'||host==='127.0.0.1'||host==='') return;
     var url=location.pathname.replace(/[?#].*$/,'')+'?vc='+Date.now();
-    fetch(url,{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(txt){
+    fetch(url).then(function(r){ return r.text(); }).then(function(txt){
       var m=txt.match(/APP_VER\s*=\s*'([^']+)'/);
       if(m && m[1] && m[1]!==APP_VER){
         var bar=document.getElementById('updBar');
