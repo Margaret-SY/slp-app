@@ -3502,7 +3502,7 @@ function openLearnForm(id){
     '</div>';
   showMo(isNew?'新建学习条目':'编辑学习条目', html,
     '<button class="btn" onclick="closeMo()">取消</button>'+
-    '<button class="btn pri" onclick="saveLearn(\''+id+'\')">保存</button>', 'narrow');
+    '<button class="btn pri" onclick="saveLearn(\''+id+'\')">保存</button>', 'wide');
 }
 function saveLearn(id){
   var title=document.getElementById('lnTitle').value.trim();
