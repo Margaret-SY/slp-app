@@ -301,7 +301,7 @@ td.num{font-variant-numeric:tabular-nums;font-weight:650;text-align:center}
 .ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.5);z-index:100;display:none;align-items:flex-start;justify-content:center;
   padding:24px 16px;overflow-y:auto;-webkit-overflow-scrolling:touch;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 .ov.on{display:flex}
-.mo{background:#fff;border-radius:16px;width:100%;max-width:680px;box-shadow:var(--sh-l);margin:auto;animation:pop .18s ease-out}
+.mo{background:#fff;border-radius:16px;width:100%;min-width:100%;max-width:680px;box-shadow:var(--sh-l);margin:auto;animation:pop .18s ease-out;flex-shrink:0}
 .mo.wide{max-width:860px}
 .mo.narrow{max-width:440px}
 @keyframes pop{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
@@ -314,9 +314,9 @@ td.num{font-variant-numeric:tabular-nums;font-weight:650;text-align:center}
   -webkit-position:sticky;position:sticky;bottom:0;background:#fff;border-radius:0 0 16px 16px}
 @media(max-width:600px){
   .ov{padding:8px}
-  .mo{width:100%;max-width:100%;min-height:auto;border-radius:14px;margin:24px auto}
-  .mo.wide{width:auto;max-width:96%;min-height:auto;margin:12px auto}
-  .mo.narrow{width:auto;max-width:88%;min-height:auto;margin:24px auto}
+  .mo{width:100%;min-width:100%;max-width:100%;min-height:auto;border-radius:14px;margin:24px auto;flex-shrink:0}
+  .mo.wide{width:100%;min-width:100%;max-width:96%;min-height:auto;margin:12px auto;flex-shrink:0}
+  .mo.narrow{width:100%;min-width:100%;max-width:88%;min-height:auto;margin:24px auto;flex-shrink:0}
   .mo-h{border-radius:14px 14px 0 0;padding:13px 15px}
   .mo-b{padding:15px}
   .mo-f{border-radius:0 0 14px 14px;padding:11px 13px;padding-bottom:calc(11px + env(safe-area-inset-bottom))}
@@ -671,8 +671,10 @@ select.inp{-webkit-appearance:none;appearance:none;
 .res-card-t{font-weight:700;font-size:15.5px;margin-bottom:4px}
 .res-card-d{font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .res-card-m{font-size:12.5px;color:var(--faint);display:flex;align-items:center;justify-content:space-between;gap:10px}
-.res-card-x{background:transparent;border:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:4px 8px;border-radius:7px;-webkit-tap-highlight-color:transparent}
+.res-card-x{background:transparent;border:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:4px 8px;border-radius:7px;-webkit-tap-highlight-color:rgba(0,0,0,0.08);position:relative;z-index:2;display:inline-block}
 .res-card-x:hover{background:#fef2f2;color:var(--danger)}
+.res-card-x.armed{background:var(--danger);color:#fff;padding:4px 10px;font-size:13px;font-weight:700}
+.btn.sm.armed{background:var(--danger);color:#fff;border-color:var(--danger)}
 .res-metrics{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px}
 .tbl-scroll{overflow-x:auto}
 table.dt{width:100%;border-collapse:collapse;font-size:13.5px;min-width:480px}
@@ -5137,7 +5139,7 @@ function researchListHTML(){
       '<div class="res-card-t">'+esc(p.name)+'</div>'+
       (p.desc?'<div class="res-card-d">'+esc(p.desc)+'</div>':'')+
       '<div class="res-card-m"><span>变量 '+((p.metrics||[]).length)+' · 记录 '+recN+'</span>'+
-      '<button class="res-card-x" title="删除项目" onclick="event.stopPropagation();if(confirm(\'删除该研究项目及其全部变量与数据记录？此操作不可恢复。\')){RESEARCH=RESEARCH.filter(function(x){return x.id!=\''+p.id+'\'});saveAll();if(RES.cur===\''+p.id+'\')RES.cur=null;render();toast(\'已删除\',\'ok\');}">✕</button></div>'+
+      '<button class="res-card-x" data-resdel="'+esc(p.id)+'" title="删除项目" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation();delResearch(\''+p.id+'\',this)">✕</button></div>'+
     '</div>';
   });
   h+='</div>';
@@ -5147,7 +5149,7 @@ function viewResearchDetail(p){
   var h='<div class="sec-h"><button class="btn sm" onclick="RES.cur=null;render()">← 项目列表</button>'+
     '<h2 style="margin-left:6px">'+esc(p.name)+'</h2>'+
     '<div class="sec-acts"><button class="btn sm" onclick="openResearchForm(\''+p.id+'\')">编辑</button>'+
-    '<button class="btn sm dan" onclick="delResearch(\''+p.id+'\')">删除</button></div></div>';
+    '<button class="btn sm dan" data-resdel="'+esc(p.id)+'" onclick="delResearch(\''+p.id+'\',this)">删除</button></div></div>';
   if(p.desc) h+='<p class="mut" style="margin:-2px 0 12px">'+esc(p.desc)+'</p>';
 
   h+='<div class="card"><div class="card-h"><span>研究变量</span><button class="btn pri sm" onclick="openMetricForm(\''+p.id+'\',null)">+ 变量</button></div>';
@@ -5253,11 +5255,45 @@ function saveResearch(id){
   saveAll(); closeMo(); RES.cur=nid; go('research');
   toast('已创建《'+name+'》· 下面先加变量、录数据，对比图会自动生成','ok');
 }
-function delResearch(id){
-  if(!confirm('删除该研究项目及其全部变量与数据记录？此操作不可恢复。')) return;
-  RESEARCH=RESEARCH.filter(function(p){ return p.id!==id; });
-  if(RES.cur===id) RES.cur=null;
-  saveAll(); closeMo(); render(); toast('已删除','ok');
+var _resDelArmed = null;
+var _resDelTimer = null;
+function delResearch(id, btn){
+  // 切换到新 id 之前，先清掉旧的待确认态
+  if(_resDelTimer && _resDelArmed !== id){
+    clearTimeout(_resDelTimer);
+    var oldBtn = document.querySelector('[data-resdel="'+_resDelArmed+'"]');
+    if(oldBtn){ oldBtn.dataset.armed=''; oldBtn.classList.remove('armed'); oldBtn.textContent='✕'; }
+    _resDelTimer = null;
+  }
+  // 二次确认：第一次点后 3 秒内再点同一个 → 真删
+  if(_resDelArmed === id){
+    if(_resDelTimer) { clearTimeout(_resDelTimer); _resDelTimer = null; }
+    _resDelArmed = null;
+    RESEARCH = RESEARCH.filter(function(p){ return p.id !== id; });
+    if(RES.cur === id) RES.cur = null;
+    saveAll(); closeMo(); render(); toast('已删除','ok');
+    return;
+  }
+  // 第一次点：进入待确认状态（避免 iOS 12 PWA 下 confirm() 经常失败）
+  _resDelArmed = id;
+  var el = btn || document.querySelector('[data-resdel="'+id+'"]');
+  if(el && el.tagName){
+    el.dataset.armed = '1';
+    el.classList.add('armed');
+    el.textContent = '确认删除';
+  }
+  toast('再点一次「确认删除」执行，3 秒内有效','warn');
+  _resDelTimer = setTimeout(function(){
+    if(_resDelArmed === id){
+      _resDelArmed = null;
+      if(el && el.dataset && el.dataset.armed === '1'){
+        el.dataset.armed = '';
+        el.classList.remove('armed');
+        el.textContent = '✕';
+      }
+    }
+    _resDelTimer = null;
+  }, 3000);
 }
 function openMetricForm(pid, mid){
   var p=researchGet(pid); if(!p) return;
@@ -5362,7 +5398,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.08-7';
+var APP_VER='2026.08.08-8';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
