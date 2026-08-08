@@ -3530,6 +3530,12 @@ function pullFeed(){
     });
   }catch(e){ /* 异常也不写日期，留给下次重试 */ }
 }
+// 手动刷新热点：清掉「今日已拉过」标记 + 强制再拉一次
+function refreshFeed(){
+  try{ localStorage.removeItem('wb_slp_feeddate'); }catch(e){}
+  pullFeed();
+  toast('正在刷新热点…');
+}
 function viewLearn(){
   var list = learnList();
   var total = LEARN.length;
@@ -3549,6 +3555,7 @@ function viewLearn(){
     '<select class="fsel" onchange="LF2.status=this.value;learnRender()">'+
       '<option value="">全部状态</option>'+Object.keys(LEARN_ST).map(function(k){return '<option value="'+k+'"'+(LF2.status===k?' selected':'')+'>'+LEARN_ST[k]+'</option>';}).join('')+'</select>'+
     '<button class="fbtn'+(LF2.rss?' on':'')+'" onclick="LF2.rss=!LF2.rss;render()">只看热点</button>'+
+    '<button class="fbtn" onclick="refreshFeed()" title="清掉今日拉取记录，重新拉一次热点">🔄 刷新</button>'+
     '</div>';
   html += '<div id="learnList">'+learnCards(list)+'</div>';
   html += '</div></div>';
@@ -5405,7 +5412,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.08-9';
+var APP_VER='2026.08.08-10';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
