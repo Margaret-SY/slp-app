@@ -127,7 +127,7 @@ svg{display:block;flex:none}
 @media(max-width:1024px){
   .side{transform:translateX(-100%);transition:transform .22s ease;box-shadow:4px 0 26px rgba(15,23,42,.2);width:248px}
   .side.open{transform:translateX(0);z-index:90}
-  .sideBg.open{position:fixed;inset:0;background:rgba(15,23,42,.42);z-index:85;display:block}
+  .sideBg.open{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(15,23,42,.42);z-index:85;display:block}
   .hbtn.menu{display:inline-flex}
   .wrap{margin-left:0;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
   .nav-i{height:50px;font-size:16px}
@@ -685,6 +685,44 @@ table.dt tbody tr:hover{background:#f8fafc}
 .chart-empty{color:var(--muted);font-size:13px;padding:10px 0}
 .ai-res{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;color:#334155;max-height:50vh;overflow:auto}
 .ai-res.err{color:#b91c1c;background:#fef2f2;border-color:#fecaca}
+
+/* ============ 版本 / 更新 ============ */
+.side-verline{margin-top:7px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.side-ver{font-size:11px;color:var(--faint)}
+.side-ver b{color:var(--muted);font-weight:700}
+.side-upd{font-size:11px;font-weight:700;color:var(--brand-d);background:var(--brand-l);
+  border:none;border-radius:20px;padding:3px 10px;cursor:pointer;-webkit-appearance:none}
+.side-upd:active{opacity:.6}
+.updbar{position:fixed;left:0;right:0;bottom:0;z-index:200;background:#0f766e;color:#fff;
+  padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));
+  font-size:14px;font-weight:650;display:none;box-shadow:0 -4px 18px rgba(15,23,42,.25)}
+.updbar.on{display:block}
+.updbar .ub-in{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.updbar .ub-t{flex:1;min-width:150px}
+.updbar button{background:#fff;color:#0f766e;border:none;border-radius:8px;
+  padding:7px 15px;font-size:13.5px;font-weight:800;cursor:pointer;-webkit-appearance:none}
+.updbar .ub-x{background:transparent;color:rgba(255,255,255,.8);font-weight:600;padding:7px 8px}
+
+/* ============ iOS12 兜底：Safari 14.1 之前不支持 flex 的 gap，
+      间距会全部塌成 0。检测失败时给 <html> 加 .nogap，用 margin 补回关键处 ============ */
+html.nogap .mo-h>*+*{margin-left:10px}
+html.nogap .mo-f>*+*{margin-left:9px}
+html.nogap .nav>*+*{margin-top:3px}
+html.nogap .nav-i>*+*{margin-left:11px}
+html.nogap .side-brand>*+*{margin-left:10px}
+html.nogap .side-verline>*+*{margin-left:8px}
+html.nogap .hdr-in>*+*{margin-left:12px}
+html.nogap .hdr-acts>*+*{margin-left:8px}
+html.nogap .hbtn>*+*{margin-left:6px}
+html.nogap .card-h>*+*{margin-left:10px}
+html.nogap .today-h>*+*{margin-left:9px}
+html.nogap .tActs>*+*{margin-left:6px}
+html.nogap .btn>*+*{margin-left:6px}
+html.nogap .sec-h>*+*{margin-left:8px}
+html.nogap .cht-lg>*{margin-right:10px}
+html.nogap .cht-lg span>*+*{margin-left:5px}
+html.nogap .notice>*+*{margin-left:8px}
+html.nogap .updbar .ub-in>*+*{margin-left:10px}
 </style>
 </head>
 <body>
@@ -769,9 +807,22 @@ table.dt tbody tr:hover{background:#f8fafc}
       <span>科研</span><span class="cnt" id="cRes">0</span>
     </button>
   </nav>
-  <div class="side-ft">数据存本机浏览器 · 可添加到主屏幕离线用</div>
+  <div class="side-ft">
+    数据存本机浏览器 · 可添加到主屏幕离线用
+    <div class="side-verline">
+      <span class="side-ver">版本 <b id="verNow">-</b></span>
+      <button class="side-upd" onclick="forceUpdate()">检查更新</button>
+    </div>
+  </div>
 </aside>
 <div class="sideBg" id="sideBg" onclick="closeSide()"></div>
+<div class="updbar" id="updBar">
+  <div class="ub-in">
+    <span class="ub-t" id="updTxt">发现新版本</span>
+    <button onclick="forceUpdate()">立即更新</button>
+    <button class="ub-x" onclick="document.getElementById('updBar').classList.remove('on')">稍后</button>
+  </div>
+</div>
 
 <div class="wrap">
   <div id="tipBar"></div>
@@ -2025,7 +2076,18 @@ function go(v){
   render();
   if(v==='learn') pullFeed();
   if(window.innerWidth<=1024) closeSide();
-  window.scrollTo({top:0,behavior:'smooth'});
+  scrollTop0();
+}
+/* iOS12 Safari 不支持 scrollTo(options)：传对象会抛 TypeError 并中断调用方后续代码
+   （曾导致 saveResearch 保存后 toast 不弹、页面不跳顶） */
+function scrollTop0(){
+  try{
+    if(document.documentElement && 'scrollBehavior' in document.documentElement.style){
+      window.scrollTo({top:0,behavior:'smooth'});
+    } else {
+      window.scrollTo(0,0);
+    }
+  }catch(e){ try{ window.scrollTo(0,0); }catch(e2){} }
 }
 function render(){
   renderTip(); renderTodo();
@@ -5290,8 +5352,95 @@ function aiResearch(pid){
   });
 }
 
+/* ==================================================================
+   版本 / 自动更新 / iOS12 flex-gap 兜底
+   （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
+   ================================================================== */
+var APP_VER='2026.08.08-5';
+
+/* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
+function flexGapSupported(){
+  try{
+    var f=document.createElement('div');
+    f.style.display='flex'; f.style.flexDirection='column';
+    f.style.rowGap='1px'; f.style.position='absolute';
+    f.style.visibility='hidden'; f.style.height='0'; f.style.padding='0'; f.style.border='0';
+    f.appendChild(document.createElement('div'));
+    f.appendChild(document.createElement('div'));
+    document.body.appendChild(f);
+    var ok=(f.scrollHeight===1);
+    f.parentNode.removeChild(f);
+    return ok;
+  }catch(e){ return true; }
+}
+function applyGapFallback(){
+  try{
+    if(!flexGapSupported()) document.documentElement.className+=' nogap';
+  }catch(e){}
+}
+
+/* 一键强制更新：注销 SW + 清空所有缓存 + 换 URL 重载（绕过 iOS 顽固缓存） */
+function forceUpdate(){
+  try{ toast('正在获取最新版本…','ok'); }catch(e){}
+  var fired=false;
+  function done(){
+    if(fired) return; fired=true;
+    var base=location.pathname.replace(/[?#].*$/,'');
+    try{ location.replace(base+'?v='+Date.now()); }
+    catch(e){ location.href=base+'?v='+Date.now(); }
+  }
+  var jobs=[];
+  try{
+    if(window.caches && caches.keys){
+      jobs.push(caches.keys().then(function(ks){
+        return Promise.all(ks.map(function(k){ return caches['delete'](k); }));
+      }));
+    }
+  }catch(e){}
+  try{
+    if(navigator.serviceWorker && navigator.serviceWorker.getRegistrations){
+      jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){
+        return Promise.all(rs.map(function(r){ return r.unregister(); }));
+      }));
+    }
+  }catch(e){}
+  if(jobs.length){
+    try{ Promise.all(jobs).then(done, done); }catch(e){ done(); }
+    setTimeout(done, 2500);   /* 兜底：清理卡住也照样重载 */
+  } else { done(); }
+}
+
+/* 静默检查线上版本号；有新版就弹底部横幅（不打断当前操作） */
+function autoCheckUpdate(){
+  try{
+    if(!window.fetch) return;
+    var host=location.hostname||'';
+    if(host==='localhost'||host==='127.0.0.1'||host==='') return;
+    var url=location.pathname.replace(/[?#].*$/,'')+'?vc='+Date.now();
+    fetch(url,{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(txt){
+      var m=txt.match(/APP_VER\s*=\s*'([^']+)'/);
+      if(m && m[1] && m[1]!==APP_VER){
+        var bar=document.getElementById('updBar');
+        var t=document.getElementById('updTxt');
+        if(t) t.textContent='发现新版本 '+m[1]+'（当前 '+APP_VER+'）';
+        if(bar) bar.classList.add('on');
+      }
+    })['catch'](function(){});
+  }catch(e){}
+}
+
+function initVersionUI(){
+  try{
+    var v=document.getElementById('verNow');
+    if(v) v.textContent=APP_VER;
+  }catch(e){}
+}
+
 /* ---------- go ---------- */
 boot();
+applyGapFallback();
+initVersionUI();
+setTimeout(autoCheckUpdate, 3000);
 
 /* ---------- PWA：离线缓存 + 可安装（仅真实部署域名生效，本地预览不注册） ---------- */
 (function(){
