@@ -1,7 +1,7 @@
 /* 言语治疗工作台 · 离线缓存 Service Worker
    作用：首次联网打开后，之后断网也能打开；数据存在各设备浏览器本地。
    注意：本 SW 只缓存“程序外壳”，不缓存任何业务数据（数据在 localStorage）。 */
-var CACHE = 'slp-v10';
+var CACHE = 'slp-v11';
 var ASSETS = [
   './',
   './index.html',
