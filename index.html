@@ -2652,20 +2652,23 @@ function bookRow(b){
 }
 
 function bookCard(){
-  var list = BOOKS.slice().sort(function(a,b){
+  /* 预约候诊框只放「还没到诊」的轻量预约登记（候诊·未到）。
+     已到诊孩子的固定排课（待上课 / 已到诊）不再堆在这里——它们已进入下方日历与对应日期框，
+     否则一个孩子的十周排课会把框框撑得很长。 */
+  var hasFixed = BOOKS.some(function(b){ return b.source==='固定排课' && b.kidId; });
+  var list = BOOKS.filter(function(b){ return b.status==='wait'; }).sort(function(a,b){
     if(a.date!==b.date) return a.date<b.date?-1:1;
-    var wa=((a.status==='wait'||a.status==='scheduled')?0:1), wb=((b.status==='wait'||b.status==='scheduled')?0:1);
-    return wa-wb;
+    return 0;
   });
   var h='<div class="card"><div class="card-h">'+
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'+
     '<h3>预约候诊</h3><span class="sp"></span>'+
-    '<button class="btn sm" onclick="openBatchPostpone()">⏩ 整批顺延</button>'+
+    (hasFixed?'<button class="btn sm" onclick="openBatchPostpone()">⏩ 整批顺延</button>':'')+
     '<button class="btn sm" onclick="openBookForm(null,\''+CAL.sel+'\')">＋ 新建预约</button>'+
-    (BOOKS.length?'<span style="font-size:12px;color:var(--muted)">共 '+BOOKS.length+' 条</span>':'')+
+    (list.length?'<span style="font-size:12px;color:var(--muted)">共 '+list.length+' 条</span>':'')+
     '</div><div class="card-b">';
   if(!list.length){
-    h+='<div class="mini-note">还没有预约记录。电话联系了家长、孩子还没来之前，点「＋ 新建预约」只写名字和电话，不必建档；孩子到了再一键转成正式档案。</div>';
+    h+='<div class="mini-note">还没有候诊登记。电话联系了家长、孩子还没来之前，点「＋ 新建预约」只写名字和电话，不必建档；孩子到了再一键转成正式档案。已到诊孩子的固定排课会显示在下方日历和对应日期里。</div>';
   }else{
     h+='<div class="bklist">'+list.map(bookRow).join('')+'</div>';
   }
@@ -2935,7 +2938,10 @@ function calendarHTML(){
     });
     bookOn(ds).forEach(function(b){
       if(b.status==='cancel') return;
-      items.push({ n:'预约·'+b.name, cls:(b.status==='wait'?'bk':(b.status==='scheduled'?'sch':(b.status==='arrived'?'dn':'ab'))) });
+      /* 只有「候诊·未到」(还没建档的电话预约) 才加「预约·」前缀；
+         已到诊 / 待上课 / 爽约 都是已建档或在册的孩子，日历上直接写名字即可。 */
+      var _p = b.status==='wait' ? '预约·' : '';
+      items.push({ n:_p+b.name, cls:(b.status==='wait'?'bk':(b.status==='scheduled'?'sch':(b.status==='arrived'?'dn':'ab'))) });
     });
     var hasOverdue = (ds<TODAY && items.some(function(x){return x.st==='pending';}))
       || (ds<TODAY && bookOn(ds).some(function(b){ return b.status==='wait'||b.status==='scheduled'; }));
@@ -5714,7 +5720,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.11-5';
+var APP_VER='2026.08.11-6';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
