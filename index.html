@@ -171,7 +171,7 @@ svg{display:block;flex:none}
 .chip.st-archived{background:#f1f5f9;color:var(--muted);border-color:var(--border-s)}
 .chip.st-fixed{background:#eef2ff;color:#4338ca;border-color:#c7d2fe}
 .chip.st-sched{background:#cffafe;color:#0e7490;border-color:#a5f3fc}
-.cchip.sch{background:#cffafe;color:#0e7490;border-color:#a5f3fc}
+.cchip.sch{background:var(--sky-l);color:#0369a1;border-left:2px solid var(--sky)}
 .chip.dn{background:var(--ok-l);color:#15803d;border-color:var(--ok-b)}
 .chip.lv{background:var(--warn-l);color:#b45309;border-color:var(--warn-b)}
 .chip.ab{background:var(--danger-l);color:var(--danger);border-color:var(--danger-b)}
@@ -1700,7 +1700,7 @@ function seed(){
   var k4={id:'k4',name:'王天天',gender:'男',birth:'2017-11-02',phone:'135****4409',dNo:'D-20231102-03',
     tags:['口吃'],brief:'首字重复为主，紧张时伴随眨眼。已完成第一疗程，流畅度明显改善。家长希望继续巩固，等待排期中。',
     format:'一对一',status:'waiting',courseNo:1,quotaTotal:10,usedBase:10,courseStartUsed:0,perCourse:10,createdAt:dOff(-120),
-    waitSince:dOff(-38),
+    waitSince:dOff(-38),pauseReason:'生病休息',pauseNote:'暑期回乡，约 9 月初回',
     history:[{no:1,done:10,startedAt:dOff(-110),endedAt:dOff(-38),result:'完成',note:'流畅度提升，家长希望继续第二疗程'}]};
   var k5={id:'k5',name:'赵小满',gender:'男',birth:'2019-09-30',phone:'186****3320',dNo:'D-20230930-11',
     tags:['语言发育迟缓','注意力弱'],brief:'已完成两个疗程，表达能力达同龄水平，顺利入园。家长反馈良好，正式结案。',
@@ -1963,18 +1963,19 @@ function buildTodo(){
             {t:'请假', c:'btn sm warn', f:"quickMark('"+s.id+"','leave')"}]
     });
   });
-  // 4) 排队超时
+  // 4) 暂停治疗提醒（仅带「暂停原因」的孩子：领导插队 / 生病休息 / 不可抗力等。
+  //    这类孩子等待空位期间在今日要处理里按天数提醒自己，并带原因与备注；
+  //    普通排队不再堆进这里，避免越积越多。）
   KIDS.forEach(function(k){
-    if(k.status!=='waiting') return;
+    if(k.status!=='waiting' || !k.pauseReason) return;
     var since = k.waitSince || k.createdAt || TODAY;
     var d = daysBetween(since, TODAY);
-    if(d < (CFG.waitAlertDays||30)) return;
     out.push({
       lv:'wr', order:3,
-      title: k.name+' 已在排队列表等待 '+d+' 天',
-      sub: '超过 '+(CFG.waitAlertDays||30)+' 天提醒 · 建议联系家长确认是否仍需排期',
-      acts:[{t:'开启新疗程', c:'btn sm pri', f:"startNewCourse('"+k.id+"')"},
-            {t:'转归档', c:'btn sm', f:"archiveKid('"+k.id+"')"},
+      title: k.name+' 暂停治疗，已在排队等待 '+d+' 天',
+      sub: '原因：'+k.pauseReason+(k.pauseNote?(' · '+k.pauseNote):'')+' · 腾出空位后优先安排',
+      acts:[{t:'开启新疗程', c:'btn sm pri', f:"startNewCourse('"+k.id+"',this)"},
+            {t:'转归档', c:'btn sm', f:"archiveKid('"+k.id+"',this)"},
             {t:'查看档案', c:'btn sm', f:"openKidDetail('"+k.id+"')"}]
     });
   });
@@ -1989,17 +1990,21 @@ function buildTodo(){
     out.push({ lv:'ok', order:4, title:'未来 2 天已排：'+soon.join('；'),
       sub:'提前准备教具与教案', acts:[{t:'看日历', c:'btn sm', f:"go('attend')"}] });
   }
-  // 6) 缴费确认（按疗程：一个疗程 N 节 = N 次缴费，逐节确认）
-  KIDS.forEach(function(k){
-    if(k.status!=='active') return;
-    var c=calc(k);
-    var paid=coursePaid(k);
-    if(paid >= c.per) return;
-    out.push({
-      lv:'wr', order:3,
-      title: k.name+' 第'+k.courseNo+'疗程已确认缴费 '+paid+' / '+c.per+' 次',
-      sub: '还差 '+(c.per-paid)+' 节待确认缴费（一个疗程 '+c.per+' 次课对应 '+c.per+' 次缴费）',
-      acts:[{t:'去确认', c:'btn sm pri', f:"openKidDetail('"+k.id+"')"}]
+  // 6) 当天有治疗但未确认缴费（不再罗列全部疗程的待确认，避免越积越多，
+  //    只提醒「今天上了课、却还没点确认缴费」的孩子；归档/结束的孩子不在此提醒）
+  SESSIONS.forEach(function(s){
+    if(s.date !== TODAY) return;
+    s.kidIds.forEach(function(id){
+      var e=s.entries[id]; if(!e || e.status!=='done') return;
+      var k=kidById(id); if(!k || k.status==='archived') return;
+      var done = PAYS.some(function(p){ return p.kidId===id && p.sessionId===s.id; });
+      if(done) return;
+      out.push({
+        lv:'wr', order:3,
+        title: '今天 '+k.name+' 上了课，还没确认缴费',
+        sub: md(s.date)+' '+s.format+' · 记得点「确认已缴费」',
+        acts:[{t:'去确认', c:'btn sm pri', f:"openKidDetail('"+id+"')"}]
+      });
     });
   });
   // 7) 预约候诊
@@ -2434,9 +2439,11 @@ function viewCourse(){
         '<span class="qnum">'+(i+1)+'</span>'+
         '<span class="crow-n">'+esc(k.name)+'</span>'+
         (d>=(CFG.waitAlertDays||30)?'<span class="chip ab">等待'+d+'天</span>':'<span class="chip">等待'+d+'天</span>')+
+        (k.pauseReason?'<span class="chip lv">暂停：'+esc(k.pauseReason)+'</span>':'')+
       '</div>'+
       '<div class="crow-m">已完成 '+(k.history||[]).length+' 个疗程 · 累计 '+c.used+' 节'+
-        (c.remain>0?' · <b style="color:#0d9488">结转 '+c.remain+' 节</b>':'')+'</div>'+
+        (c.remain>0?' · <b style="color:#0d9488">结转 '+c.remain+' 节</b>':'')+
+        (k.pauseReason?(' · <span style="color:#b45309">暂停：'+esc(k.pauseReason)+(k.pauseNote?('（'+esc(k.pauseNote)+'）'):'')+'</span>'):'')+'</div>'+
       '<div class="crow-acts">'+
         '<button class="btn sm pri" onclick="startNewCourse(\''+k.id+'\',this)">开启新疗程</button>'+
         (i>0?'<button class="btn sm" onclick="moveQueue(\''+k.id+'\',-1)">上移</button>':'')+
@@ -2487,6 +2494,7 @@ function archiveKid(id, btn){
 function reactivate(id){
   var k=kidById(id); if(!k) return;
   k.status='waiting'; k.waitSince=TODAY; k.archivedAt=null;
+  k.pauseReason=null; k.pauseNote=null;
   var mx=0; KIDS.forEach(function(x){ if(x.status==='waiting') mx=Math.max(mx,(x.queueOrder||0)+1); });
   k.queueOrder=mx;
   saveAll(); render(); toast('已移入排队列表','ok');
@@ -2500,6 +2508,7 @@ function startNewCourse(id, btn){
     k.courseStartUsed = c.used;
     k.quotaTotal = (k.quotaTotal||0) + per;
     k.status='active'; k.waitSince=null; k.queueOrder=null;
+    k.pauseReason=null; k.pauseNote=null;
     saveAll(); render(); toast('已开启第 '+k.courseNo+' 疗程','ok');
   }, '确认开启疗程?');
 }
@@ -2536,6 +2545,13 @@ function openEndCourse(id){
       '<button type="button" class="on" data-v="waiting" onclick="segPick(this)">待重新排队</button>'+
       '<button type="button" data-v="archived" onclick="segPick(this)">已结束 / 归档</button>'+
     '</div><div class="hint">「待重新排队」＝家长还想继续，进入排队列表等空位；「已结束」＝正式结案，档案收起不再显示在活跃列表。</div></div>';
+
+  body += '<div class="fg"><label>暂停原因（若转排队，可选填；带原因的孩子会在「今日要处理」按等待天数提醒）</label>'+
+    '<select class="inp" id="ecPauseReason">'+
+      ['','领导插队','生病休息','不可抗力','其他'].map(function(s){ return '<option value="'+s+'">'+s+'</option>'; }).join('')+
+    '</select></div>'+
+    '<div class="fg"><label>暂停备注（可选）</label>'+
+    '<input class="inp" id="ecPauseNote" placeholder="如：发烧休息两周 / 领导孩子插在周三上午"></div>';
 
   body += '<div class="fg"><label>疗程小结（存入档案，方便日后回顾）'+aiBtnHTML('疗程小结',k.id)+'</label>'+
     '<textarea class="inp" id="ecNote" rows="3" placeholder="例：三词句表达稳定，主动提要求频率明显提升。建议下疗程进入短句叙事。"></textarea></div>';
@@ -2574,6 +2590,9 @@ function doEndCourse(id){
   if(next==='archived'){ k.status='archived'; k.archivedAt=TODAY; k.queueOrder=null; }
   else{
     k.status='waiting'; k.waitSince=TODAY;
+    var pr=(document.getElementById('ecPauseReason')||{}).value||'';
+    var pn=(document.getElementById('ecPauseNote')||{}).value||'';
+    k.pauseReason=pr||null; k.pauseNote=pn||null;
     var mx=0; KIDS.forEach(function(x){ if(x.status==='waiting') mx=Math.max(mx,(x.queueOrder||0)+1); });
     k.queueOrder=mx;
   }
@@ -2582,6 +2601,35 @@ function doEndCourse(id){
   closeMo(); render();
   var _msg = (next==='archived'?'已结案归档':'已转入排队列表') + (_cleaned>0?(' · 已清除剩余 '+_cleaned+' 条预约'):'');
   toast(_msg,'ok');
+}
+
+/* 暂停治疗：因领导插队 / 生病休息 / 不可抗力等原因需暂停，转入排队列表等待空位。
+   设置暂停原因 + 备注，并在「今日要处理」里按等待天数提醒（仅带原因的孩子才提醒）。 */
+function openPauseForm(id){
+  var k=kidById(id); if(!k) return;
+  var body='<div class="notice tip" style="margin:0 0 14px">孩子将转入「待重新排队」列表，并在「今日要处理」里按等待天数提醒你（带原因与备注），方便你腾出空位时优先安排。其未来的固定排课会被一并清除。</div>'+
+    '<div class="fg"><label>暂停原因</label>'+
+    '<select class="inp" id="pauseReason">'+
+      ['领导插队','生病休息','不可抗力','其他'].map(function(s){ return '<option value="'+s+'">'+s+'</option>'; }).join('')+
+    '</select></div>'+
+    '<div class="fg"><label>备注（可选）</label>'+
+    '<textarea class="inp" id="pauseNote" rows="2" placeholder="如：发烧休息两周，约 8/25 回来；或领导孩子插在周三上午"></textarea></div>';
+  showMo('暂停治疗 — '+esc(k.name), body,
+    '<button class="btn" onclick="closeMo()">取消</button>'+
+    '<button class="btn pri" onclick="doPause(\''+id+'\')">确认暂停</button>', 'narrow');
+}
+function doPause(id){
+  var k=kidById(id); if(!k) return;
+  var reason=(document.getElementById('pauseReason')||{}).value||'';
+  var note=(document.getElementById('pauseNote')||{}).value||'';
+  k.status='waiting'; k.waitSince=TODAY; k.archivedAt=null;
+  k.pauseReason=reason||null; k.pauseNote=note||null;
+  var mx=0; KIDS.forEach(function(x){ if(x.status==='waiting') mx=Math.max(mx,(x.queueOrder||0)+1); });
+  k.queueOrder=mx;
+  var _cleaned=endRoundCleanup(k.id);
+  if(!saveAll()){ toast('保存失败，数据未写入。请检查浏览器存储或先导出备份','err',6000); return; }
+  closeMo(); render();
+  toast('已暂停治疗，转入排队（'+(reason||'无原因')+'）'+( _cleaned>0?(' · 已清 '+_cleaned+' 条预约'):''),'ok');
 }
 
 /* ==================================================================
@@ -2941,7 +2989,7 @@ function calendarHTML(){
       /* 只有「候诊·未到」(还没建档的电话预约) 才加「预约·」前缀；
          已到诊 / 待上课 / 爽约 都是已建档或在册的孩子，日历上直接写名字即可。 */
       var _p = b.status==='wait' ? '预约·' : '';
-      items.push({ n:_p+b.name, cls:(b.status==='wait'?'bk':(b.status==='scheduled'?'sch':(b.status==='arrived'?'dn':'ab'))) });
+      items.push({ n:_p+b.name, cls:(b.status==='wait'?'bk':(b.status==='scheduled'?'pd':(b.status==='arrived'?'dn':'ab'))) });
     });
     var hasOverdue = (ds<TODAY && items.some(function(x){return x.st==='pending';}))
       || (ds<TODAY && bookOn(ds).some(function(b){ return b.status==='wait'||b.status==='scheduled'; }));
@@ -3324,6 +3372,7 @@ function openKidDetail(id){
   /* 疗程记录 */
   b+='<div class="dsec"><h4>疗程记录<span class="sp"></span>'+
     (k.status==='active'?'<button class="btn sm pri" onclick="closeMo();openEndCourse(\''+id+'\')">结束当前疗程</button>':'')+
+    (k.status==='active'?'<button class="btn sm" onclick="closeMo();openPauseForm(\''+id+'\')">暂停治疗</button>':'')+
     (k.status==='waiting'?'<button class="btn sm pri" onclick="closeMo();startNewCourse(\''+id+'\')">开启新疗程</button>':'')+
     '</h4>';
   if(k.status==='active'){
@@ -3390,12 +3439,14 @@ function openKidDetail(id){
              :'<span class="rr-cnt">还差 '+(c.per-paid)+' 次</span>')+'</div>'+
       '<div class="rr-bar"><i style="width:'+pct+'%'+(full?' class="ok"':'')+'"></i></div>'+
     '</div>'+
-    (unpaid.length? '<div class="pay-list"><div class="mini-note" style="margin:4px 0 6px">以下已上课尚未确认缴费：</div>'+unpaid.map(function(s){
-        return '<div class="pay-row"><div class="pm"><b>'+esc(md(s.date))+'</b> '+esc(s.format)+' · 待确认缴费</div>'+
-          '<button class="btn sm pri" onclick="markPaid(\''+id+'\',\''+s.id+'\')">确认已缴费</button></div>';
-      }).join('')+'</div>'
-    : (full?'<div class="mini-note">本疗程 '+c.per+' 次缴费已全部确认 ✓</div>'
-          :'<div class="mini-note">本疗程暂无可确认的已上课记录</div>'))+
+    (k.status==='archived'
+      ? '<div class="mini-note">已归档 · 本疗程已确认缴费 '+paid+' / '+c.per+' 次</div>'
+      : (unpaid.length? '<div class="pay-list"><div class="mini-note" style="margin:4px 0 6px">以下已上课尚未确认缴费：</div>'+unpaid.map(function(s){
+          return '<div class="pay-row"><div class="pm"><b>'+esc(md(s.date))+'</b> '+esc(s.format)+' · 待确认缴费</div>'+
+            '<button class="btn sm pri" onclick="markPaid(\''+id+'\',\''+s.id+'\')">确认已缴费</button></div>';
+        }).join('')+'</div>'
+      : (full?'<div class="mini-note">本疗程 '+c.per+' 次缴费已全部确认 ✓</div>'
+          :'<div class="mini-note">本疗程暂无可确认的已上课记录</div>'))) +
     (kpays.length? '<div class="pay-list" style="margin-top:10px">'+kpays.map(function(p){
         var rel='第'+(p.courseNo||'?')+'疗程';
         var amt = Number(p.amount)||0;
@@ -5720,7 +5771,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.11-6';
+var APP_VER='2026.08.11-7';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
