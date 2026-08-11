@@ -100,6 +100,30 @@ svg{display:block;flex:none}
   .tItem{flex-wrap:wrap}
   .tActs{width:100%;padding-left:19px;margin-top:8px}
 }
+/* ============ 提醒区块 ============ */
+.remind-h{background:linear-gradient(90deg,#fef3c7,#fff)}
+.rItem{display:flex;align-items:flex-start;gap:11px;padding:10px 12px;border-radius:var(--r-s);margin-bottom:8px;border:1px solid #fde68a;background:#fffbeb}
+.rItem:last-child{margin-bottom:0}
+.rItem.done{border-color:var(--ok-b);background:var(--ok-l);opacity:.7}
+.rItem .rChk{width:20px;height:20px;border-radius:6px;border:2px solid #d97706;flex:none;margin-top:1px;cursor:pointer;background:#fff;display:flex;align-items:center;justify-content:center;color:#16a34a;font-weight:900;font-size:13px}
+.rItem.done .rChk{border-color:var(--ok)}
+.rMain{flex:1;min-width:0}
+.rText{font-size:14.5px;line-height:1.45;color:#1f2937;font-weight:600}
+.rItem.done .rText{text-decoration:line-through;color:#64748b;font-weight:500}
+.rSub{font-size:12px;color:var(--muted);margin-top:3px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.rcat{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px}
+.rcat.排课{background:#dbeafe;color:#1d4ed8}
+.rcat.语训{background:#ede9fe;color:#6d28d9}
+.rcat.其他{background:#e2e8f0;color:#475569}
+.rDate{font-size:11.5px;padding:1px 7px;border-radius:20px;background:#fee2e2;color:#b91c1c;font-weight:700}
+.rDate.soon{background:#fef9c3;color:#a16207}
+.rDate.none{background:#f1f5f9;color:#64748b}
+.rActs{display:flex;gap:6px;flex:none;align-items:center}
+.rEmpty{font-size:13px;color:var(--muted);padding:6px 2px 2px}
+@media(max-width:600px){
+  .rActs{width:100%;padding-left:31px;margin-top:7px}
+  html.nogap .rActs>*+*{margin-left:6px}
+}
 
 /* ============ tabs ============ */
 /* ============ 左侧导航 / 抽屉 ============ */
@@ -862,6 +886,20 @@ html.nogap .updbar .ub-in>*+*{margin-left:10px}
     <div class="today-body" id="todayBody"></div>
   </section>
 
+  <!-- 提醒（常驻：需要尽快办的事，避免忘记） -->
+  <section class="today remind-sec" id="remindSec">
+    <div class="today-h remind-h">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <h2>提醒</h2>
+      <span class="sp"></span>
+      <button class="btn sm pri" onclick="openReminderForm(null)">＋ 新提醒</button>
+      <button class="today-toggle" onclick="var b=document.getElementById('remindBody');b.classList.toggle('hide');this.style.transform=b.classList.contains('hide')?'rotate(-90deg)':''">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+    <div class="today-body" id="remindBody"></div>
+  </section>
+
   <!-- 导航已移至左侧 sidebar -->
 
   <main id="view"></main>
@@ -882,7 +920,7 @@ var K = {
   kids:'wb_slp_kids', sessions:'wb_slp_sessions', plans:'wb_slp_plans', pays:'wb_slp_pays',
   lib:'wb_slp_lib', assess:'wb_slp_assess', books:'wb_slp_books', learn:'wb_slp_learn', research:'wb_slp_research',
   cfg:'wb_slp_cfg', sync:'wb_slp_sync', seeded:'wb_slp_seeded', tipDismiss:'wb_slp_tipdismiss',
-  closed:'wb_slp_closed'
+  closed:'wb_slp_closed', reminders:'wb_slp_reminders', remSeeded:'wb_slp_remseeded'
 };
 
 /* ---------- utils ---------- */
@@ -927,6 +965,7 @@ function saveAll(){
   ok = save(K.closed,CLOSED) && ok;
   ok = save(K.learn,LEARN) && ok;
   ok = save(K.research,RESEARCH) && ok;
+  ok = save(K.reminders,REMINDERS) && ok;
   ok = save(K.cfg,CFG) && ok;
   return ok;
 }
@@ -1606,7 +1645,8 @@ var ST_CLS   = {done:'dn', pending:'pd', leave:'lv', absent:'ab', closed:'cl'};
 // 缴费按「疗程」计：一个疗程 N 节 = N 次缴费，逐节确认，不再区分挂号批次
 
 /* ---------- state ---------- */
-var KIDS=[], SESSIONS=[], PLANS=[], PAYS=[], LIB=[], ASSESS=[], BOOKS=[], LEARN=[], RESEARCH=[], CFG={}, SYNC={}, CLOSED=[];
+var KIDS=[], SESSIONS=[], PLANS=[], PAYS=[], LIB=[], ASSESS=[], BOOKS=[], LEARN=[], RESEARCH=[], CFG={}, SYNC={}, CLOSED=[], REMINDERS=[];
+var REMIND_CATS=['排课','语训','其他'];
 var VIEW='kids';
 var F = { q:'', tag:'', status:'active' };          // 档案筛选
 var LF = { kid:'', status:'', from:'', to:'' };     // 课程筛选
@@ -1625,12 +1665,14 @@ function boot(){
   CLOSED   = load(K.closed, []);
   LEARN    = load(K.learn, []);
   RESEARCH = load(K.research, []);
+  REMINDERS= load(K.reminders, []);
   CFG      = load(K.cfg, {perCourse:10, waitAlertDays:30, countLeave:false, customTags:[]});
   SYNC     = load(K.sync, {});
   if(CFG.perCourse==null) CFG.perCourse=10;
   if(CFG.waitAlertDays==null) CFG.waitAlertDays=30;
   if(CFG.countLeave==null) CFG.countLeave=false;
   if(!localStorage.getItem(K.seeded)){ seed(); localStorage.setItem(K.seeded,'1'); }
+  if(!localStorage.getItem(K.remSeeded)){ seedReminders(); localStorage.setItem(K.remSeeded,'1'); }
   render();
   pullFeed();
 }
@@ -1687,6 +1729,15 @@ function ageOf(b){
 /* ==================================================================
    示例数据
    ================================================================== */
+function seedReminders(){
+  var samples=[
+    {id:uid(), text:'尽快安排王天天上课（暂无空档，等腾出时段）', cat:'排课', date:'', note:'家长希望继续巩固流畅度', kidId:'k4', done:false, createdAt:TODAY},
+    {id:uid(), text:'准备下颌骨稳定训练（口肌）教具：压舌板+小冰块', cat:'语训', date:dOff(3), note:'下周构音课要用', done:false, createdAt:TODAY},
+    {id:uid(), text:'回家长微信群发本周家庭指导语音', cat:'其他', date:'', note:'', done:false, createdAt:TODAY}
+  ];
+  REMINDERS=REMINDERS.concat(samples);
+  save(K.reminders,REMINDERS);
+}
 function seed(){
   var k1={id:'k1',name:'林小雨',gender:'女',birth:'2019-03-12',phone:'138****2071',dNo:'D-20240312-07',
     tags:['语言发育迟缓'],brief:'2岁半开口，目前双词句为主，主动表达意愿弱。听指令能力尚可，注意力约 8 分钟。妈妈配合度高，家庭作业完成情况好。忌大声催促，易情绪回避。',
@@ -1919,6 +1970,22 @@ function seed(){
    ================================================================== */
 function buildTodo(){
   var out=[];
+  // 0) 提醒（未完成都进今日要处理，避免忘记；逾期置顶）
+  REMINDERS.forEach(function(r){
+    if(r.done) return;
+    var label, order, lv;
+    if(r.date && r.date<TODAY){ label='已逾期 '+(-daysBetween(TODAY,r.date))+' 天'; order=0; lv='od'; }
+    else if(r.date && r.date===TODAY){ label='今天到期'; order=0; lv='od'; }
+    else if(r.date){ label=md(r.date)+' 到期'; order=2; lv='wr'; }
+    else { label='待办'; order=2; lv='wr'; }
+    out.push({
+      lv:lv, order:order,
+      title:(r.cat?('【'+r.cat+'】'):'')+r.text,
+      sub:label+(r.note?(' · '+r.note):'')+(r.kidId?(' · '+kidName(r.kidId)):''),
+      acts:[{t:'完成', c:'btn sm ok', f:"toggleReminder('"+r.id+"')"},
+            {t:'编辑', c:'btn sm', f:"openReminderForm('"+r.id+"')"}]
+    });
+  });
   // 1) 逾期未记录的课
   SESSIONS.forEach(function(s){
     if(s.date >= TODAY) return;
@@ -2064,6 +2131,99 @@ function renderTodo(){
         return '<button class="'+a.c+'" onclick="'+a.f+'">'+a.t+'</button>'; }).join('')+
       '</div></div>';
   }).join('');
+}
+
+/* ============ 提醒（常驻备忘 + 并入今日要处理，防忘记） ============ */
+var __remEdit=null, __remKid='', __remPre=null;
+function renderReminders(){
+  var box=document.getElementById('remindBody'); if(!box) return;
+  var list=REMINDERS.slice().sort(function(a,b){
+    if(a.done!==b.done) return a.done?1:-1;            // 未完成在前
+    var da=a.date||'9999', db=b.date||'9999';
+    if(da!==db) return da<db?-1:1;                      // 有日期按到期排
+    return (a.createdAt||'')<(b.createdAt||'')?-1:1;
+  });
+  if(!list.length){ box.innerHTML='<div class="rEmpty">还没有提醒。需要尽快办的事（例如「尽快安排某某上课，暂无空档」「准备语训教具」）点右上「＋ 新提醒」记下来，免得忘。</div>'; return; }
+  box.innerHTML=list.map(function(r){
+    var cat=r.cat||'其他';
+    var dcls='none', dlab='无日期';
+    if(r.date){
+      var dd=daysBetween(TODAY,r.date);
+      if(r.date<TODAY){ dcls=''; dlab='已逾期 '+(-dd)+' 天'; }
+      else if(r.date===TODAY){ dcls='soon'; dlab='今天到期'; }
+      else if(dd<=3){ dcls='soon'; dlab=md(r.date)+' 到期'; }
+      else { dcls='soon'; dlab=md(r.date); }
+    }
+    var sub='<span class="rcat '+cat+'">'+cat+'</span><span class="rDate '+dcls+'">'+dlab+'</span>';
+    if(r.note) sub+='<span>'+esc(r.note)+'</span>';
+    return '<div class="rItem'+(r.done?' done':'')+'">'+
+      '<div class="rChk" onclick="toggleReminder(\''+r.id+'\')">'+(r.done?'✓':'')+'</div>'+
+      '<div class="rMain"><div class="rText">'+esc(r.text)+'</div><div class="rSub">'+sub+'</div></div>'+
+      '<div class="rActs">'+
+        '<button class="btn sm" onclick="openReminderForm(\''+r.id+'\')">编辑</button>'+
+        '<button class="btn sm dan" onclick="delReminder(\''+r.id+'\',this)">删除</button>'+
+      '</div></div>';
+  }).join('');
+}
+function openReminderForm(id){
+  var pre=__remPre; __remPre=null;
+  var r=null;
+  if(id){ r=REMINDERS.filter(function(x){return x.id===id;})[0]; __remKid=(r&&r.kidId)||''; }
+  else if(pre){ r={text:pre.text||'', cat:pre.cat||'排课', date:'', note:'', kidId:pre.kidId||''}; __remKid=pre.kidId||''; }
+  else { __remKid=''; }
+  __remEdit=r?r.id:null;
+  var cat=r?r.cat:'排课';
+  var body=''+
+    '<div class="fg"><label>提醒内容 <span class="req">*</span></label>'+
+      '<textarea id="remText" class="fin" rows="2" placeholder="例如：尽快安排小明上课（暂无空档）；准备口肌训练教具…">'+esc(r?r.text:'')+'</textarea></div>'+
+    '<div class="fg"><label>类别</label>'+
+      '<div class="segm" id="remCat">'+
+        REMIND_CATS.map(function(c){ return '<button type="button" class="'+(c===cat?'on':'')+'" data-v="'+c+'" onclick="segPick(this)">'+c+'</button>'; }).join('')+
+      '</div>'+
+      '<div class="hint">「排课」＝尽快安排上课 / 等空位；「语训」＝与言语训练相关的事务；「其他」＝杂项。</div></div>'+
+    '<div class="fg"><label>到期日（可选）</label>'+
+      '<input id="remDate" type="date" class="fin" value="'+esc(r?r.date:'')+'">'+
+      '<div class="hint">留空＝仅备忘、不按日期催；填了日期会在「今日要处理」里按到期提醒。</div></div>'+
+    '<div class="fg"><label>备注（可选）</label>'+
+      '<input id="remNote" class="fin" value="'+esc(r?r.note:'')+'" placeholder="补充说明"></div>';
+  showMo(id?'编辑提醒':'新提醒', body,
+    '<button class="btn" onclick="closeMo()">取消</button>'+
+    '<button class="btn pri" onclick="saveReminder()">保存</button>');
+  setTimeout(function(){ var i=document.getElementById('remText'); if(i) i.focus(); }, 60);
+}
+function saveReminder(){
+  var text=((document.getElementById('remText')||{}).value||'').trim();
+  if(!text){ toast('请填写提醒内容','err'); return; }
+  var cat=segVal('remCat')||'其他';
+  var date=((document.getElementById('remDate')||{}).value||'').trim();
+  var note=((document.getElementById('remNote')||{}).value||'').trim();
+  if(__remEdit){
+    var r=REMINDERS.filter(function(x){return x.id===__remEdit;})[0];
+    if(r){ r.text=text; r.cat=cat; r.date=date; r.note=note; }
+  }else{
+    REMINDERS.push({id:uid(), text:text, cat:cat, date:date, note:note, kidId:__remKid||'', done:false, createdAt:TODAY});
+  }
+  __remKid=''; __remEdit=null;
+  if(!saveAll()){ toast('保存失败，数据未写入','err',5000); return; }
+  closeMo(); render(); toast('已保存提醒','ok');
+}
+function toggleReminder(id){
+  var r=REMINDERS.filter(function(x){return x.id===id;})[0]; if(!r) return;
+  r.done=!r.done;
+  if(!saveAll()){ toast('保存失败','err',5000); return; }
+  render();
+}
+function delReminder(id, btn){
+  armDel('rem:'+id, btn, function(){
+    REMINDERS=REMINDERS.filter(function(x){ return x.id!==id; });
+    if(!saveAll()){ toast('删除失败','err',5000); return; }
+    render(); toast('已删除提醒');
+  });
+}
+function openKidReminder(id){
+  var k=kidById(id); if(!k) return;
+  __remPre={ text:'尽快安排'+k.name+'上课（暂无空档）', cat:'排课', kidId:id };
+  openReminderForm(null);
 }
 
 var __arCb=null;
@@ -3373,6 +3533,7 @@ function openKidDetail(id){
   b+='<div class="dsec"><h4>疗程记录<span class="sp"></span>'+
     (k.status==='active'?'<button class="btn sm pri" onclick="closeMo();openEndCourse(\''+id+'\')">结束当前疗程</button>':'')+
     (k.status==='active'?'<button class="btn sm" onclick="closeMo();openPauseForm(\''+id+'\')">暂停治疗</button>':'')+
+    (k.status==='active'?'<button class="btn sm" onclick="closeMo();openKidReminder(\''+id+'\')">提醒：尽快安排上课</button>':'')+
     (k.status==='waiting'?'<button class="btn sm pri" onclick="closeMo();startNewCourse(\''+id+'\')">开启新疗程</button>':'')+
     '</h4>';
   if(k.status==='active'){
@@ -5771,7 +5932,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.11-7';
+var APP_VER='2026.08.11-8';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
