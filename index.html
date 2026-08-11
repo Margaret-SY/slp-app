@@ -170,6 +170,8 @@ svg{display:block;flex:none}
 .chip.st-waiting{background:var(--warn-l);color:#b45309;border-color:var(--warn-b)}
 .chip.st-archived{background:#f1f5f9;color:var(--muted);border-color:var(--border-s)}
 .chip.st-fixed{background:#eef2ff;color:#4338ca;border-color:#c7d2fe}
+.chip.st-sched{background:#cffafe;color:#0e7490;border-color:#a5f3fc}
+.cchip.sch{background:#cffafe;color:#0e7490;border-color:#a5f3fc}
 .chip.dn{background:var(--ok-l);color:#15803d;border-color:var(--ok-b)}
 .chip.lv{background:var(--warn-l);color:#b45309;border-color:var(--warn-b)}
 .chip.ab{background:var(--danger-l);color:var(--danger);border-color:var(--danger-b)}
@@ -2133,7 +2135,7 @@ function render(){
   document.getElementById('cCourse').textContent = KIDS.filter(function(k){return k.status==='active';}).length;
   document.getElementById('cAtt').textContent = SESSIONS.filter(function(s){
     var e=s.entries; for(var id in e){ if(e[id].status==='pending') return true; } return false; }).length
-    + BOOKS.filter(function(b){ return b.status==='wait'; }).length;
+    + BOOKS.filter(function(b){ return b.status==='wait'||b.status==='scheduled'; }).length;
   if(document.getElementById('cLib')) document.getElementById('cLib').textContent = ASSESS.length;
   if(document.getElementById('cLearn')) document.getElementById('cLearn').textContent = LEARN.filter(function(l){return l.status!=='done';}).length;
   if(document.getElementById('cRes')) document.getElementById('cRes').textContent = RESEARCH.length;
@@ -2587,7 +2589,7 @@ function doEndCourse(id){
    ================================================================== */
 function bookById(bid){ var b=null; BOOKS.forEach(function(x){ if(x.id===bid) b=x; }); return b; }
 function bookOn(ds){ return BOOKS.filter(function(b){ return b.date===ds; }); }
-function bookStLbl(st){ return ({wait:'候诊·未到',arrived:'已到诊·建档',no:'爽约未到',cancel:'已取消'})[st]||st; }
+function bookStLbl(st){ return ({wait:'候诊·未到',scheduled:'待上课',arrived:'已到诊·建档',no:'爽约未到',cancel:'已取消'})[st]||st; }
 
 function addDays(ds,n){ var d=parseD(ds); d.setDate(d.getDate()+n); return fmtD(d); }
 /* 首次到诊后，按固定星期+时间自动生成未来 N 周的预约；遇停诊日顺延一周（最多顺延 24 周） */
@@ -2598,7 +2600,7 @@ function genSeries(kidId, startDs, wk, tStart, tEnd, count){
     BOOKS.push({
       id:uid(), name:kidName(kidId), date:ds,
       tStart:tStart, tEnd:tEnd, time:(tStart?tStart:'')+(tEnd?('–'+tEnd):''),
-      status:'wait', kidId:kidId, source:'固定排课', seriesStart:startDs, createdAt:TODAY
+      status:'scheduled', kidId:kidId, source:'固定排课', seriesStart:startDs, createdAt:TODAY
     });
   }
 }
@@ -2607,15 +2609,15 @@ function genSeries(kidId, startDs, wk, tStart, tEnd, count){
 function endRoundCleanup(kidId){
   var before=BOOKS.length;
   BOOKS = BOOKS.filter(function(b){
-    return !(b.kidId===kidId && b.status==='wait' && b.date>TODAY);
+    return !(b.kidId===kidId && (b.status==='wait'||b.status==='scheduled') && b.date>TODAY);
   });
   return before-BOOKS.length;
 }
 
 function bookRow(b){
   var overdue = (b.status==='wait' && b.date<TODAY);
-  var chipCls = b.status==='wait'?'chip t1':(b.status==='arrived'?'chip dn':(b.status==='no'?'chip ab':'chip st-archived'));
-  var dotC = b.status==='wait'?'#7c3aed':(b.status==='arrived'?'#16a34a':(b.status==='no'?'#dc2626':'#94a3b8'));
+  var chipCls = b.status==='wait'?'chip t1':(b.status==='scheduled'?'chip st-sched':(b.status==='arrived'?'chip dn':(b.status==='no'?'chip ab':'chip st-archived')));
+  var dotC = b.status==='wait'?'#7c3aed':(b.status==='scheduled'?'#0e7490':(b.status==='arrived'?'#16a34a':(b.status==='no'?'#dc2626':'#94a3b8')));
   var h='<div class="bkrow '+b.status+(overdue?' od':'')+'">'+
     '<div class="bk-main">'+
       '<div class="bk-t">'+
@@ -2635,6 +2637,11 @@ function bookRow(b){
        '<button class="btn sm" onclick="openBookForm(\''+b.id+'\')">改期 / 编辑</button>'+
        '<button class="btn sm" onclick="setBookSt(\''+b.id+'\',\'cancel\',this)">取消</button>'+
        '<button class="btn sm dan" onclick="delBook(\''+b.id+'\',this)">删除</button>';
+  }else if(b.status==='scheduled'){
+    h+='<button class="btn sm pri" onclick="bookArrive(\''+b.id+'\')">已到诊</button>'+
+       '<button class="btn sm dan" onclick="setBookSt(\''+b.id+'\',\'no\',this)">爽约未到</button>'+
+       '<button class="btn sm" onclick="openBookForm(\''+b.id+'\')">改期 / 编辑</button>'+
+       '<button class="btn sm dan" onclick="delBook(\''+b.id+'\',this)">删除</button>';
   }else if(b.status==='arrived'){
     h+=(b.kidId?'<button class="btn sm" onclick="openKidDetail(\''+b.kidId+'\')">查看档案</button>':'<span class="bk-s">已建档</span>');
   }else{
@@ -2647,12 +2654,13 @@ function bookRow(b){
 function bookCard(){
   var list = BOOKS.slice().sort(function(a,b){
     if(a.date!==b.date) return a.date<b.date?-1:1;
-    var wa=(a.status==='wait')?0:1, wb=(b.status==='wait')?0:1;
+    var wa=((a.status==='wait'||a.status==='scheduled')?0:1), wb=((b.status==='wait'||b.status==='scheduled')?0:1);
     return wa-wb;
   });
   var h='<div class="card"><div class="card-h">'+
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'+
     '<h3>预约候诊</h3><span class="sp"></span>'+
+    '<button class="btn sm" onclick="openBatchPostpone()">⏩ 整批顺延</button>'+
     '<button class="btn sm" onclick="openBookForm(null,\''+CAL.sel+'\')">＋ 新建预约</button>'+
     (BOOKS.length?'<span style="font-size:12px;color:var(--muted)">共 '+BOOKS.length+' 条</span>':'')+
     '</div><div class="card-b">';
@@ -2743,9 +2751,49 @@ function delBook(id, btn){
   });
 }
 
+/* 整批顺延：把某孩子全部未来固定排课整体后移 N 周（自动跳过停诊日）。
+   用于「我有一天停诊了」场景——一键把所有固定时间往后推，不影响别的孩子。 */
+function openBatchPostpone(){
+  var kids={};
+  BOOKS.forEach(function(b){ if(b.source==='固定排课' && b.date>TODAY && b.kidId) kids[b.kidId]=kidName(b.kidId); });
+  var opts=Object.keys(kids).map(function(id){ return '<option value="'+id+'">'+esc(kids[id])+'</option>'; }).join('');
+  if(!opts){ toast('当前没有可整批顺延的固定排课','err'); return; }
+  var h='<div class="fg"><label>选择孩子</label><select class="inp" id="bpKid">'+opts+'</select></div>'+
+    '<div class="fg"><label>顺延周数</label><input class="inp" type="number" id="bpWk" value="1" min="1" max="12"></div>'+
+    '<div class="hint">将该孩子所有「待上课」的固定预约整体向后顺延指定周数；若顺延后落在停诊日，会自动再顺延一周。每节的具体时间段（开始/结束）保持不变。</div>';
+  showMo('整批顺延固定排课', h,
+    '<button class="btn" onclick="closeMo()">取消</button>'+
+    '<button class="btn pri" onclick="doBatchPostpone()">顺延</button>');
+}
+function batchPostpone(kid, wk){
+  var n=0;
+  BOOKS.forEach(function(b){
+    if(b.kidId===kid && b.source==='固定排课' && b.date>TODAY){
+      var ds=addDays(b.date,7*wk), guard=0;
+      while(CLOSED.some(function(c){ return c.date===ds; }) && guard<24){ ds=addDays(ds,7); guard++; }
+      b.date=ds; n++;
+    }
+  });
+  return n;
+}
+function doBatchPostpone(){
+  var kid=document.getElementById('bpKid').value;
+  var wk=parseInt(document.getElementById('bpWk').value,10)||1;
+  if(wk<1) wk=1;
+  var n=batchPostpone(kid, wk);
+  if(!n){ toast('没有需要顺延的预约','err'); return; }
+  if(!saveAll()){ toast('保存失败，数据未写入。请检查浏览器存储或先导出备份','err',6000); return; }
+  closeMo(); render(); toast('已顺延 '+n+' 条固定预约（'+wk+' 周）','ok');
+}
+
 function bookArrive(bid){
   var b=bookById(bid);
   if(!b){ toast('预约不存在','err'); return; }
+  if(b.kidId){ // 已建档孩子的固定排课后续节次：直接标记到诊，避免重复建档
+    b.status='arrived'; b.arrivedAt=TODAY;
+    if(!saveAll()){ toast('保存失败，数据未写入。请检查浏览器存储或先导出备份','err',6000); return; }
+    render(); toast('已标记到诊：'+b.name,'ok'); return;
+  }
   window.__fromBook = bid;
   openKidForm(null, {fromBook:b, date:b.date, tStart:b.tStart, tEnd:b.tEnd, name:b.name, phone:b.phone, brief:b.note, tags: b.tag?[b.tag]:[]});
 }
@@ -2887,10 +2935,10 @@ function calendarHTML(){
     });
     bookOn(ds).forEach(function(b){
       if(b.status==='cancel') return;
-      items.push({ n:'预约·'+b.name, cls:(b.status==='wait'?'bk':(b.status==='arrived'?'dn':'ab')) });
+      items.push({ n:'预约·'+b.name, cls:(b.status==='wait'?'bk':(b.status==='scheduled'?'sch':(b.status==='arrived'?'dn':'ab'))) });
     });
     var hasOverdue = (ds<TODAY && items.some(function(x){return x.st==='pending';}))
-      || (ds<TODAY && bookOn(ds).some(function(b){ return b.status==='wait'; }));
+      || (ds<TODAY && bookOn(ds).some(function(b){ return b.status==='wait'||b.status==='scheduled'; }));
     var isClosed = CLOSED.some(function(c){ return c.date===ds; });
     var cls='cal-d'+(out?' out':'')+(ds===TODAY?' tdy':'')+(ds===CAL.sel?' sel':'')+(isClosed?' closed':'');
     h+='<div class="'+cls+'" onclick="calPick(\''+ds+'\')">'+
@@ -3196,7 +3244,7 @@ function saveKid(id){
       if(_bk){
         var _nk=kidById(_nid);
         if(_nk && !_nk.autoScheduled){
-          genSeries(_nid, _bk.date, parseD(_bk.date).getDay(), _bk.tStart||'', _bk.tEnd||'', 10);
+          genSeries(_nid, _bk.date, parseD(_bk.date).getDay(), _bk.tStart||'', _bk.tEnd||'', 9); // 含到诊周共 10 节：到诊为第 1 节，再生成 9 节固定排课
           _nk.autoScheduled=true;
         }
       }
@@ -5666,7 +5714,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.11-4';
+var APP_VER='2026.08.11-5';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
