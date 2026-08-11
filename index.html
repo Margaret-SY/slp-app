@@ -686,6 +686,7 @@ select.inp{-webkit-appearance:none;appearance:none;
 .res-card-x:hover{background:#fef2f2;color:var(--danger)}
 .res-card-x.armed{background:var(--danger);color:#fff;padding:4px 10px;font-size:13px;font-weight:700}
 .btn.sm.armed{background:var(--danger);color:#fff;border-color:var(--danger)}
+.armed{background:var(--danger)!important;color:#fff!important;font-weight:700;box-shadow:0 0 0 2px var(--danger) inset}
 .res-metrics{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px}
 .tbl-scroll{overflow-x:auto}
 table.dt{width:100%;border-collapse:collapse;font-size:13.5px;min-width:480px}
@@ -2124,6 +2125,7 @@ function scrollTop0(){
   }catch(e){ try{ window.scrollTo(0,0); }catch(e2){} }
 }
 function render(){
+  clearDelArmed();
   renderTip(); renderTodo();
   document.getElementById('cKids').textContent = KIDS.filter(function(k){return k.status!=='archived';}).length;
   document.getElementById('cLogs').textContent = SESSIONS.length;
@@ -2242,7 +2244,7 @@ function kidCard(k){
       '<span class="sp"></span>'+
       '<button class="btn sm" onclick="event.stopPropagation();openAssessForm(null,\''+k.id+'\')">评估</button>'+
       '<button class="btn sm" onclick="event.stopPropagation();openSession(null,\''+k.id+'\')">记一节课</button>'+
-      '<button class="btn sm dan" onclick="event.stopPropagation();delKid(\''+k.id+'\')">删除</button>'+
+      '<button class="btn sm dan" onclick="event.stopPropagation();delKid(\''+k.id+'\',this)">删除</button>'+
     '</div>'+
   '</div>';
 }
@@ -2346,7 +2348,7 @@ function sessionRow(s){
       (overdue?'<span class="chip ab">逾期未记录</span>':'')+
       '<span class="sp"></span>'+
       '<button class="btn sm" onclick="openSession(\''+s.id+'\')">编辑</button>'+
-      '<button class="btn sm dan" onclick="delSession(\''+s.id+'\')">删除</button>'+
+      '<button class="btn sm dan" onclick="delSession(\''+s.id+'\',this)">删除</button>'+
     '</div>'+
     '<div class="slog-b">'+s.kidIds.map(function(id){
       var e=s.entries[id]||{}; var k=kidById(id);
@@ -2370,10 +2372,11 @@ function sessionRow(s){
     '</div></div>';
 }
 
-function delSession(id){
-  if(!confirm('确定删除这条课程记录吗？\n\n删除后该节课不再计入课时统计，此操作不可撤销。')) return;
-  SESSIONS = SESSIONS.filter(function(s){ return s.id!==id; });
-  saveAll(); render(); toast('已删除');
+function delSession(id, btn){
+  armDel('session:'+id, btn, function(){
+    SESSIONS = SESSIONS.filter(function(s){ return s.id!==id; });
+    saveAll(); render(); toast('已删除');
+  });
 }
 
 /* ==================================================================
@@ -2432,10 +2435,10 @@ function viewCourse(){
       '<div class="crow-m">已完成 '+(k.history||[]).length+' 个疗程 · 累计 '+c.used+' 节'+
         (c.remain>0?' · <b style="color:#0d9488">结转 '+c.remain+' 节</b>':'')+'</div>'+
       '<div class="crow-acts">'+
-        '<button class="btn sm pri" onclick="startNewCourse(\''+k.id+'\')">开启新疗程</button>'+
+        '<button class="btn sm pri" onclick="startNewCourse(\''+k.id+'\',this)">开启新疗程</button>'+
         (i>0?'<button class="btn sm" onclick="moveQueue(\''+k.id+'\',-1)">上移</button>':'')+
         (i<W.length-1?'<button class="btn sm" onclick="moveQueue(\''+k.id+'\',1)">下移</button>':'')+
-        '<button class="btn sm" onclick="archiveKid(\''+k.id+'\')">归档</button>'+
+        '<button class="btn sm" onclick="archiveKid(\''+k.id+'\',this)">归档</button>'+
       '</div></div>';
   }).join('') : '<div class="mini-note">排队列表为空</div>';
   h+='</div></div>';
@@ -2471,11 +2474,12 @@ function moveQueue(id,dir){
   W.forEach(function(k,idx){ k.queueOrder=idx; });
   saveAll(); render();
 }
-function archiveKid(id){
-  var k=kidById(id); if(!k) return;
-  if(!confirm('确定将「'+k.name+'」转入归档吗？\n\n归档后不再出现在活跃列表，但所有记录都保留，随时可以重新排队。')) return;
-  k.status='archived'; k.archivedAt=TODAY;
-  saveAll(); render(); toast('已归档');
+function archiveKid(id, btn){
+  armDel('archive:'+id, btn, function(){
+    var k=kidById(id); if(!k) return;
+    k.status='archived'; k.archivedAt=TODAY;
+    saveAll(); render(); toast('已归档');
+  }, '确认归档?');
 }
 function reactivate(id){
   var k=kidById(id); if(!k) return;
@@ -2484,20 +2488,17 @@ function reactivate(id){
   k.queueOrder=mx;
   saveAll(); render(); toast('已移入排队列表','ok');
 }
-function startNewCourse(id){
+function startNewCourse(id, btn){
   var k=kidById(id); if(!k) return;
   var c=calc(k);
   var per=k.perCourse||CFG.perCourse;
-  var msg='为「'+k.name+'」开启第 '+(k.courseNo+1)+' 疗程？\n\n'+
-    '· 新增课时：'+per+' 节\n'+
-    (c.remain>0 ? '· 上期结转：'+c.remain+' 节（一起计入可用余额）\n' : '')+
-    '· 开启后可用课时共 '+(c.remain+per)+' 节';
-  if(!confirm(msg)) return;
-  k.courseNo = k.courseNo+1;
-  k.courseStartUsed = c.used;
-  k.quotaTotal = (k.quotaTotal||0) + per;
-  k.status='active'; k.waitSince=null; k.queueOrder=null;
-  saveAll(); render(); toast('已开启第 '+k.courseNo+' 疗程','ok');
+  armDel('course:'+id, btn, function(){
+    k.courseNo = k.courseNo+1;
+    k.courseStartUsed = c.used;
+    k.quotaTotal = (k.quotaTotal||0) + per;
+    k.status='active'; k.waitSince=null; k.queueOrder=null;
+    saveAll(); render(); toast('已开启第 '+k.courseNo+' 疗程','ok');
+  }, '确认开启疗程?');
 }
 
 /* 结束疗程弹窗 */
@@ -2603,13 +2604,13 @@ function bookRow(b){
   h+='</div><div class="bk-a">';
   if(b.status==='wait'){
     h+='<button class="btn sm pri" onclick="bookArrive(\''+b.id+'\')">已到诊 · 建档</button>'+
-       '<button class="btn sm dan" onclick="setBookSt(\''+b.id+'\',\'no\')">爽约未到</button>'+
+       '<button class="btn sm dan" onclick="setBookSt(\''+b.id+'\',\'no\',this)">爽约未到</button>'+
        '<button class="btn sm" onclick="openBookForm(\''+b.id+'\')">改期 / 编辑</button>'+
-       '<button class="btn sm" onclick="setBookSt(\''+b.id+'\',\'cancel\')">取消</button>';
+       '<button class="btn sm" onclick="setBookSt(\''+b.id+'\',\'cancel\',this)">取消</button>';
   }else if(b.status==='arrived'){
     h+=(b.kidId?'<button class="btn sm" onclick="openKidDetail(\''+b.kidId+'\')">查看档案</button>':'<span class="bk-s">已建档</span>');
   }else{
-    h+='<button class="btn sm" onclick="setBookSt(\''+b.id+'\',\'wait\')">恢复候诊</button>';
+    h+='<button class="btn sm" onclick="setBookSt(\''+b.id+'\',\'wait\',this)">恢复候诊</button>';
   }
   h+='</div></div>';
   return h;
@@ -2671,7 +2672,7 @@ function openBookForm(id, presetDate){
     '<textarea class="inp" id="bkNote" rows="3" placeholder="家长反馈的核心问题、陪同人、注意事项……">'+(b?esc(b.note):'')+'</textarea>'+
     '<div class="hint">孩子到了建档时，这段备注会自动带进档案「简况」，不用再问一遍家长</div></div>';
   showMo(b?'编辑预约 — '+esc(b.name):'新建预约登记', h,
-    (b?'<button class="btn dan" onclick="delBook(\''+b.id+'\')" style="margin-right:auto">删除</button>':'')+
+    (b?'<button class="btn dan" onclick="delBook(\''+b.id+'\',this)" style="margin-right:auto">删除</button>':'')+
     '<button class="btn" onclick="closeMo()">取消</button>'+
     '<button class="btn pri" onclick="saveBook('+(b?"'"+b.id+"'":'null')+')">保存预约</button>');
   setTimeout(function(){ var n=document.getElementById('bkName'); if(n) n.focus(); },30);
@@ -2706,11 +2707,12 @@ function saveBook(id){
   closeMo(); render();
 }
 
-function delBook(id){
-  var b=bookById(id); if(!b) return;
-  if(!confirm('确定删除「'+b.name+'」这条预约吗？此操作不可撤销。')) return;
-  BOOKS=BOOKS.filter(function(x){ return x.id!==id; });
-  saveAll(); closeMo(); render(); toast('已删除预约');
+function delBook(id, btn){
+  armDel('book:'+id, btn, function(){
+    var b=bookById(id); if(!b) return;
+    BOOKS=BOOKS.filter(function(x){ return x.id!==id; });
+    saveAll(); closeMo(); render(); toast('已删除预约');
+  });
 }
 
 function bookArrive(bid){
@@ -2720,9 +2722,15 @@ function bookArrive(bid){
   openKidForm(null, {fromBook:b, date:b.date, tStart:b.tStart, tEnd:b.tEnd, name:b.name, phone:b.phone, brief:b.note, tags: b.tag?[b.tag]:[]});
 }
 
-function setBookSt(bid, st){
+function setBookSt(bid, st, btn){
   var b=bookById(bid); if(!b) return;
-  if(st==='cancel' && !confirm('确定取消「'+b.name+'」的预约吗？')) return;
+  if(st==='cancel'){
+    armDel('bookcancel:'+bid, btn, function(){
+      b.status=st;
+      saveAll(); render(); toast('已取消该预约','ok');
+    }, '确认取消?');
+    return;
+  }
   b.status=st;
   var msg = st==='no'?'已标记爽约未到':(st==='cancel'?'已取消该预约':(st==='wait'?'已恢复候诊':'已更新状态'));
   saveAll(); render(); toast(msg,'ok');
@@ -2737,7 +2745,7 @@ function openCloseForm(presetDate){
     '<input class="inp" id="clNote" value="'+esc(ex?ex.note:'')+'" placeholder="如 外出开会 / 休假"></div>'+
     '<div class="hint">停诊日会在日历上标红。当天已有的「待上课」可一键标记为停诊；孩子固定时间当天来不了，请家长改期或顺延。</div>';
   showMo(ex?'编辑停诊日 — '+esc(ds):'标记停诊日', h,
-    (ex?'<button class="btn dan" onclick="delClose(\''+ds+'\')" style="margin-right:auto">删除</button>':'')+
+    (ex?'<button class="btn dan" onclick="delClose(\''+ds+'\',this)" style="margin-right:auto">删除</button>':'')+
     '<button class="btn" onclick="closeMo()">取消</button>'+
     '<button class="btn pri" onclick="saveClose()">保存</button>');
 }
@@ -2750,10 +2758,12 @@ function saveClose(){
   if(!saveAll()){ toast('保存失败','err',5000); return; }
   closeMo(); render(); toast('已标记停诊：'+ds,'ok');
 }
-function delClose(ds){
-  CLOSED = CLOSED.filter(function(c){ return c.date!==ds; });
-  if(!saveAll()){ toast('保存失败','err',5000); return; }
-  closeMo(); render(); toast('已取消停诊标记');
+function delClose(ds, btn){
+  armDel('close:'+ds, btn, function(){
+    CLOSED = CLOSED.filter(function(c){ return c.date!==ds; });
+    if(!saveAll()){ toast('保存失败','err',5000); return; }
+    closeMo(); render(); toast('已取消停诊标记');
+  }, '确认?');
 }
 function closeDaySessions(ds){
   var ss=sessionsOn(ds); var n=0;
@@ -2981,6 +2991,7 @@ function showMo(title, body, footer, size){
   document.body.style.overflow='hidden';
 }
 function closeMo(){
+  clearDelArmed();
   document.getElementById('ov').classList.remove('on');
   document.getElementById('moBox').innerHTML='';
   document.body.style.overflow='';
@@ -3073,7 +3084,7 @@ function openKidForm(id, preset){
   }
 
   showMo(k?'编辑档案 — '+esc(k.name):(pre.fromBook?'预约到诊 · 建立正式档案':'新建儿童档案'), b,
-    (k?'<button class="btn dan" onclick="delKid(\''+k.id+'\')" style="margin-right:auto">删除档案</button>':'')+
+    (k?'<button class="btn dan" onclick="delKid(\''+k.id+'\',this)" style="margin-right:auto">删除档案</button>':'')+
     '<button class="btn" onclick="closeMo()">取消</button>'+
     '<button class="btn pri" onclick="saveKid('+(k?"'"+k.id+"'":'null')+')">保存</button>');
 }
@@ -3087,7 +3098,7 @@ function kidTagChips(){
   if(!CFG.customTags) CFG.customTags=[];
   function chip(t, custom){
     var on=_tagSel.indexOf(t)>=0?' on':'';
-    var rm = custom ? '<span class="rm" onclick="event.stopPropagation();removeCustomTag(\''+esc(t)+'\')" title="从类型库移除">×</span>' : '';
+    var rm = custom ? '<span class="rm" onclick="event.stopPropagation();removeCustomTag(\''+esc(t)+'\',this)" title="从类型库移除">×</span>' : '';
     return '<button type="button" class="'+on+'" data-t="'+esc(t)+'" onclick="toggleTag(this)">'+esc(t)+rm+'</button>';
   }
   return TAGS.map(function(t){ return chip(t,false); }).join('') +
@@ -3106,12 +3117,13 @@ function addCustomTag(){
   el.value='';
   toast('已新增类型「'+v+'」','ok');
 }
-function removeCustomTag(t){
-  if(!confirm('把「'+t+'」从类型库移除？\n已使用该类型的孩子档案里仍会保留此标签，仅不再作为可选项出现。')) return;
-  CFG.customTags = (CFG.customTags||[]).filter(function(x){ return x!==t; });
-  save(K.cfg, CFG);
-  document.getElementById('kTags').innerHTML = kidTagChips();
-  toast('已从类型库移除「'+t+'」');
+function removeCustomTag(t, btn){
+  armDel('tag:'+t, btn, function(){
+    CFG.customTags = (CFG.customTags||[]).filter(function(x){ return x!==t; });
+    save(K.cfg, CFG);
+    document.getElementById('kTags').innerHTML = kidTagChips();
+    toast('已从类型库移除「'+t+'」');
+  });
 }
 function saveKid(id){
   var name=(document.getElementById('kName').value||'').trim();
@@ -3158,18 +3170,19 @@ function saveKid(id){
   if(!saveAll()){ toast('保存失败，数据未写入。请检查浏览器存储或先导出备份','err',6000); return; }
   closeMo(); render(); toast(id?'已保存':'档案已创建','ok');
 }
-function delKid(id){
-  var k=kidById(id); if(!k) return;
-  var n=SESSIONS.filter(function(s){ return s.kidIds.indexOf(id)>=0; }).length;
-  if(!confirm('确定要彻底删除「'+k.name+'」的档案吗？\n\n关联的 '+n+' 条课程记录中该孩子的部分也会一并移除，此操作不可撤销。\n\n如果只是治疗结束了，建议用「归档」而不是删除。')) return;
-  KIDS=KIDS.filter(function(x){ return x.id!==id; });
-  PLANS=PLANS.filter(function(p){ return p.kidId!==id; });
-  SESSIONS.forEach(function(s){
-    s.kidIds=s.kidIds.filter(function(x){ return x!==id; });
-    delete s.entries[id];
+function delKid(id, btn){
+  armDel('kid:'+id, btn, function(){
+    var k=kidById(id); if(!k) return;
+    var n=SESSIONS.filter(function(s){ return s.kidIds.indexOf(id)>=0; }).length;
+    KIDS=KIDS.filter(function(x){ return x.id!==id; });
+    PLANS=PLANS.filter(function(p){ return p.kidId!==id; });
+    SESSIONS.forEach(function(s){
+      s.kidIds=s.kidIds.filter(function(x){ return x!==id; });
+      delete s.entries[id];
+    });
+    SESSIONS=SESSIONS.filter(function(s){ return s.kidIds.length>0; });
+    saveAll(); closeMo(); render(); toast('已删除');
   });
-  SESSIONS=SESSIONS.filter(function(s){ return s.kidIds.length>0; });
-  saveAll(); closeMo(); render(); toast('已删除');
 }
 
 /* ==================================================================
@@ -3303,7 +3316,7 @@ function openKidDetail(id){
           (amt?(' · ¥'+amt.toLocaleString('zh-CN')):'')+(p.note?'<small>'+esc(p.note)+'</small>':'')+'</div>'+
           (p.verifyDate?'<span class="chip dn">已核对</span>':'')+
           (legacyPending?'<span class="chip lv">待核对</span><button class="btn sm ok" onclick="markVerified(\''+p.id+'\')">核对</button>':'')+
-          '<button class="btn sm dan" onclick="delPay(\''+p.id+'\')">删除</button></div>';
+          '<button class="btn sm dan" onclick="delPay(\''+p.id+'\',this)">删除</button></div>';
       }).join('')+'</div>' : '')+
   '</div>';
 
@@ -3602,7 +3615,7 @@ function openPlanForm(pid, kidId){
     '</div><div class="hint">同一个孩子设为「进行中」时，会自动把该孩子其他计划转为存档</div></div>';
 
   showMo(p?'编辑阶段计划':'新增阶段计划', b,
-    (p?'<button class="btn dan" onclick="delPlan(\''+p.id+'\')" style="margin-right:auto">删除</button>':'')+
+    (p?'<button class="btn dan" onclick="delPlan(\''+p.id+'\',this)" style="margin-right:auto">删除</button>':'')+
     '<button class="btn" onclick="closeMo()">取消</button>'+
     '<button class="btn pri" onclick="savePlan('+(p?"'"+p.id+"'":'null')+')">保存</button>', 'narrow');
 }
@@ -3623,10 +3636,11 @@ function savePlan(pid){
   if(!saveAll()){ toast('保存失败，数据未写入。请检查浏览器存储或先导出备份','err',6000); return; }
   closeMo(); render(); toast('计划已保存','ok');
 }
-function delPlan(pid){
-  if(!confirm('确定删除这个阶段计划吗？此操作不可撤销。')) return;
-  PLANS=PLANS.filter(function(p){ return p.id!==pid; });
-  saveAll(); closeMo(); render(); toast('已删除');
+function delPlan(pid, btn){
+  armDel('plan:'+pid, btn, function(){
+    PLANS=PLANS.filter(function(p){ return p.id!==pid; });
+    saveAll(); closeMo(); render(); toast('已删除');
+  });
 }
 
 /* ==================================================================
@@ -3757,7 +3771,7 @@ function learnCards(list){
         srcBtn+
         '<button class="btn sm" onclick="markLearn(\''+l.id+'\',\''+nextSt+'\')">'+nextLbl+'</button>'+
         (l.addedBy==='rss' ? '' : '<button class="btn sm" onclick="openLearnForm(\''+l.id+'\')">编辑</button>')+
-        '<button class="btn sm dan" onclick="delLearn(\''+l.id+'\')">删除</button>'+
+        '<button class="btn sm dan" onclick="delLearn(\''+l.id+'\',this)">删除</button>'+
       '</div>'+
     '</div>';
   }).join('');
@@ -3769,10 +3783,11 @@ function markLearn(id,st){
   saveAll(); render();
   toast('已标记为「'+LEARN_ST[st]+'」','ok');
 }
-function delLearn(id){
-  if(!confirm('确定删除这条学习条目？此操作不可恢复。')) return;
-  LEARN = LEARN.filter(function(l){ return l.id!==id; });
-  saveAll(); render(); toast('已删除','ok');
+function delLearn(id, btn){
+  armDel('learn:'+id, btn, function(){
+    LEARN = LEARN.filter(function(l){ return l.id!==id; });
+    saveAll(); render(); toast('已删除','ok');
+  });
 }
 function openLearnForm(id){
   var l = id ? (function(){ for(var i=0;i<LEARN.length;i++) if(LEARN[i].id===id) return LEARN[i]; return null; })() : null;
@@ -3845,8 +3860,8 @@ function openSettings(){
       '<button class="btn" onclick="closeMo();openReport()">导出治疗记录报表（Word / PDF）</button>'+
     '</div>'+
     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'+
-      '<button class="btn warn" onclick="clearDemo()">清空示例数据</button>'+
-      '<button class="btn dan" onclick="clearAll()">清空全部数据</button>'+
+      '<button class="btn warn" onclick="clearDemo(this)">清空示例数据</button>'+
+      '<button class="btn dan" onclick="clearAll(this)">清空全部数据</button>'+
     '</div>'+
   '</div>';
 
@@ -4173,12 +4188,13 @@ function savePay(){
   else { closeMo(); render(); }
   toast('缴费已登记'+(amt?(' ¥'+amt):'（已确认）'), 'ok');
 }
-function delPay(id){
-  if(!confirm('删除这笔缴费记录？')) return;
-  PAYS = PAYS.filter(function(p){ return p.id!==id; });
-  saveAll();
-  if(window.__detailId) openKidDetail(window.__detailId); else render();
-  toast('已删除');
+function delPay(id, btn){
+  armDel('pay:'+id, btn, function(){
+    PAYS = PAYS.filter(function(p){ return p.id!==id; });
+    saveAll();
+    if(window.__detailId) openKidDetail(window.__detailId); else render();
+    toast('已删除');
+  });
 }
 
 /* ==================================================================
@@ -4479,7 +4495,7 @@ function viewAssess(){
           '<button class="btn sm" onclick="openAssessForm(\''+a.id+'\')">编辑</button>'+
           '<button class="btn sm" onclick="copyIEP(\''+a.id+'\')">复制 IEP</button>'+
           '<button class="btn sm" onclick="applyIEP(\''+a.id+'\')">写入计划</button>'+
-          '<button class="btn sm dan" onclick="delAssess(\''+a.id+'\')">删除</button>'+
+          '<button class="btn sm dan" onclick="delAssess(\''+a.id+'\',this)">删除</button>'+
         '</div></div>';
     }).join('')+'</div>';
   }
@@ -4703,10 +4719,11 @@ function fallbackCopy(txt){
   document.body.removeChild(ta);
 }
 
-function delAssess(id){
-  if(!confirm('删除这份评估？')) return;
-  ASSESS=ASSESS.filter(function(a){ return a.id!==id; });
-  saveAll(); render(); toast('已删除');
+function delAssess(id, btn){
+  armDel('assess:'+id, btn, function(){
+    ASSESS=ASSESS.filter(function(a){ return a.id!==id; });
+    saveAll(); render(); toast('已删除');
+  });
 }
 
 function viewLib(){
@@ -4737,7 +4754,7 @@ function viewLib(){
           (x.tags||[]).map(function(t){ return '<span class="chip '+tagCls(t)+'">'+esc(t)+'</span>'; }).join('')+
           '<span class="sp"></span>'+
           '<button class="btn sm" onclick="openLibForm(\''+x.id+'\')">编辑</button>'+
-          '<button class="btn sm dan" onclick="delLib(\''+x.id+'\')">删除</button></div>'+
+          '<button class="btn sm dan" onclick="delLib(\''+x.id+'\',this)">删除</button></div>'+
         '<div class="lib-title">'+esc(x.title||'（无标题）')+'</div>'+
         (x.note?'<div class="lib-note">'+esc(x.note)+'</div>':'')+
         (x.file?('<div class="lib-file">📎 '+esc(x.file)+'</div>'):'')+
@@ -4821,10 +4838,11 @@ function saveLib(){
   if(!saveAll()){ toast('保存失败，数据未写入。请检查浏览器存储或先导出备份','err',6000); return; }
   closeMo(); render();
 }
-function delLib(id){
-  if(!confirm('删除这份资料？')) return;
-  LIB = LIB.filter(function(l){ return l.id!==id; });
-  saveAll(); render(); toast('已删除');
+function delLib(id, btn){
+  armDel('lib:'+id, btn, function(){
+    LIB = LIB.filter(function(l){ return l.id!==id; });
+    saveAll(); render(); toast('已删除');
+  });
 }
 function previewSrc(src){
   showMo('图片预览','<img src="'+src+'" style="max-width:100%;border-radius:8px">','<button class="btn" onclick="closeMo()">关闭</button>','narrow');
@@ -5198,16 +5216,22 @@ function doImport(input){
     window.__imp=d;
     showMo('导入恢复', body,
       '<button class="btn" onclick="closeMo()">取消</button>'+
-      '<button class="btn pri" onclick="confirmImport()">确认导入</button>','narrow');
+      '<button class="btn pri" onclick="confirmImport(this)">确认导入</button>','narrow');
   };
   r.onerror=function(){ toast('读取文件失败','err'); };
   r.readAsText(f,'utf-8');
 }
-function confirmImport(){
+function confirmImport(btn){
   var d=window.__imp; if(!d) return;
   var mode=segVal('imMode');
   if(mode==='replace'){
-    if(!confirm('整体替换会清空当前设备上的全部数据，且无法撤销。\n\n确定继续吗？（建议先导出一份当前数据）')) return;
+    armDel('importReplace', btn, function(){ importApply(d,'replace'); }, '确认替换?');
+    return;
+  }
+  importApply(d,'merge');
+}
+function importApply(d, mode){
+  if(mode==='replace'){
     KIDS=d.kids||[]; SESSIONS=d.sessions||[]; PLANS=d.plans||[]; PAYS=d.pays||[]; LIB=d.lib||[]; ASSESS=d.assess||[]; BOOKS=d.books||[]; LEARN=d.learn||[]; RESEARCH=d.research||[];
     if(d.cfg) CFG=d.cfg;
   }else{
@@ -5260,26 +5284,34 @@ function exportCSV(){
   toast('复盘表已导出（'+(rows.length-1)+' 行）','ok',3000);
 }
 
-function clearDemo(){
+function clearDemo(btn){
   var demoK=['k1','k2','k3','k4','k5'];
   var has=KIDS.some(function(k){ return demoK.indexOf(k.id)>=0; }) || LEARN.some(function(l){ return l.addedBy==='seed'; });
   if(!has){ toast('没有检测到示例数据'); return; }
-  if(!confirm('将删除 5 个示例孩子（林小雨、陈子哲、林果果、王天天、赵小满）及其全部课程记录和计划。\n\n你自己新建的数据不会受影响。确定吗？')) return;
-  KIDS=KIDS.filter(function(k){ return demoK.indexOf(k.id)<0; });
-  PLANS=PLANS.filter(function(p){ return demoK.indexOf(p.kidId)<0; });
-  SESSIONS.forEach(function(s){
-    s.kidIds=s.kidIds.filter(function(id){ return demoK.indexOf(id)<0; });
-    demoK.forEach(function(id){ delete s.entries[id]; });
-  });
-  SESSIONS=SESSIONS.filter(function(s){ return s.kidIds.length>0; });
-  LEARN=LEARN.filter(function(l){ return l.addedBy!=='seed'; });
-  saveAll(); closeMo(); render(); toast('示例数据已清空','ok');
+  armDel('clearDemo', btn, function(){
+    KIDS=KIDS.filter(function(k){ return demoK.indexOf(k.id)<0; });
+    PLANS=PLANS.filter(function(p){ return demoK.indexOf(p.kidId)<0; });
+    SESSIONS.forEach(function(s){
+      s.kidIds=s.kidIds.filter(function(id){ return demoK.indexOf(id)<0; });
+      demoK.forEach(function(id){ delete s.entries[id]; });
+    });
+    SESSIONS=SESSIONS.filter(function(s){ return s.kidIds.length>0; });
+    LEARN=LEARN.filter(function(l){ return l.addedBy!=='seed'; });
+    saveAll(); closeMo(); render(); toast('示例数据已清空','ok');
+  }, '确认清空示例?');
 }
 
-function clearAll(){
-  if(!confirm('⚠️ 第 1 步确认\n\n即将清空全部数据：'+KIDS.length+' 份档案、'+SESSIONS.length+' 条课程记录、'+PLANS.length+' 条计划、'+LIB.length+' 份资料。\n\n此操作不可恢复。确定继续吗？')) return;
-  var t=prompt('⚠️ 第 2 步确认\n\n这是最后一次机会。请输入「清空」两个字确认：','');
-  if(t!=='清空'){ toast('输入不匹配，已取消操作'); return; }
+function clearAll(btn){
+  armDel('clearAll', btn, function(){ clearAllConfirm(); }, '确认清空全部?');
+}
+function clearAllConfirm(){
+  showMo('⚠️ 最后一步确认', '<div class="hint">这是最后一次机会。请输入「清空」两个字确认：</div><div class="fg"><input id="clrWord" class="fin" placeholder="清空" value=""></div>',
+    '<button class="btn" onclick="closeMo()">取消</button><button class="btn dan" onclick="clearAllGo()">清空全部</button>');
+  setTimeout(function(){ var e=document.getElementById('clrWord'); if(e) e.focus(); }, 60);
+}
+function clearAllGo(){
+  var w=(document.getElementById('clrWord').value||'').trim();
+  if(w!=='清空'){ toast('输入不匹配，已取消操作','err'); return; }
   KIDS=[]; SESSIONS=[]; PLANS=[]; PAYS=[]; LIB=[]; ASSESS=[]; BOOKS=[]; LEARN=[]; RESEARCH=[];
   saveAll();
   localStorage.setItem(K.seeded,'1');
@@ -5336,7 +5368,7 @@ function viewResearchDetail(p){
     p.metrics.forEach(function(m){
       h+='<span class="chip t3">'+esc(m.name)+(m.unit?' ('+esc(m.unit)+')':'')+' · '+(m.type==='num'?'数值':'文本')+
         ' <a style="cursor:pointer;color:#0f766e" onclick="event.stopPropagation();openMetricForm(\''+p.id+'\',\''+m.id+'\')">✎</a>'+
-        ' <a style="cursor:pointer;color:#ef4444" onclick="event.stopPropagation();delMetric(\''+p.id+'\',\''+m.id+'\')">✕</a></span>';
+        ' <a style="cursor:pointer;color:#ef4444" onclick="event.stopPropagation();delMetric(\''+p.id+'\',\''+m.id+'\',this)">✕</a></span>';
     });
     h+='</div>';
   } else {
@@ -5364,7 +5396,7 @@ function researchTableHTML(p){
     p.metrics.forEach(function(m){ var v=r.values?r.values[m.id]:undefined; h+='<td>'+(v==null||v===''?'<span class="mut">—</span>':esc(v))+'</td>'; });
     h+='<td class="mut">'+esc(r.note||'')+'</td>';
     h+='<td class="row-acts"><button class="btn sm" onclick="openRecordForm(\''+p.id+'\',\''+r.id+'\')">编辑</button>'+
-       '<button class="btn sm dan" onclick="delRecord(\''+p.id+'\',\''+r.id+'\')">删</button></td></tr>';
+       '<button class="btn sm dan" onclick="delRecord(\''+p.id+'\',\''+r.id+'\',this)">删</button></td></tr>';
   });
   h+='</tbody></table></div></div>';
   return h;
@@ -5433,6 +5465,27 @@ function saveResearch(id){
   saveAll(); closeMo(); RES.cur=nid; go('research');
   toast('已创建《'+name+'》· 下面先加变量、录数据，对比图会自动生成','ok');
 }
+/* 通用「二次点击确认」——规避 iOS 12 PWA 下 confirm()/prompt() 原生对话框静默失效 */
+var _armDel = {};
+function clearDelArmed(){
+  for(var k in _armDel){ var a=_armDel[k]; if(a){ if(a.timer) clearTimeout(a.timer); var b=a.btn; if(b && b.tagName){ b.classList.remove('armed'); if(b._delOld!=null) b.textContent=b._delOld; } } delete _armDel[k]; }
+}
+function armDel(key, btn, doDelete, label){
+  if(_armDel[key]){                 /* 已待确认 → 第二次点击，真执行 */
+    if(_armDel[key].timer) clearTimeout(_armDel[key].timer);
+    delete _armDel[key];
+    doDelete();
+    return;
+  }
+  clearDelArmed();                  /* 同时只保留一个待确认项 */
+  var el = (btn && btn.tagName) ? btn : null;
+  var txt = label || '确认删除?';
+  if(el){ el._delOld = el.textContent; el.classList.add('armed'); el.textContent = txt; }
+  _armDel[key] = { timer: setTimeout(function(){
+      var a=_armDel[key]; if(a && a.btn && a.btn.tagName){ a.btn.classList.remove('armed'); if(a.btn._delOld!=null) a.btn.textContent=a.btn._delOld; } delete _armDel[key];
+    }, 3000), btn: el };
+  toast('再点一次「'+txt+'」执行，3 秒内有效','warn');
+}
 var _resDelArmed = null;
 var _resDelTimer = null;
 function delResearch(id, btn){
@@ -5491,12 +5544,13 @@ function saveMetric(pid, mid){
   else { p.metrics.push({id:uid(), name:name, unit:unit, type:type}); }
   saveAll(); closeMo(); render(); toast('已保存','ok');
 }
-function delMetric(pid, mid){
-  if(!confirm('删除该变量？已录入的对应数据会一并清除。')) return;
-  var p=researchGet(pid); if(!p) return;
-  p.metrics=p.metrics.filter(function(m){ return m.id!==mid; });
-  (p.records||[]).forEach(function(r){ if(r.values) delete r.values[mid]; });
-  saveAll(); closeMo(); render(); toast('已删除','ok');
+function delMetric(pid, mid, btn){
+  armDel('metric:'+pid+':'+mid, btn, function(){
+    var p=researchGet(pid); if(!p) return;
+    p.metrics=p.metrics.filter(function(m){ return m.id!==mid; });
+    (p.records||[]).forEach(function(r){ if(r.values) delete r.values[mid]; });
+    saveAll(); closeMo(); render(); toast('已删除','ok');
+  });
 }
 function openRecordForm(pid, rid){
   var p=researchGet(pid); if(!p) return;
@@ -5530,11 +5584,12 @@ function saveRecord(pid, rid){
   else { p.records.push({id:uid(), kidId:kidId, tp:tp, values:values, note:note, date:TODAY}); }
   saveAll(); closeMo(); render(); toast('已保存','ok');
 }
-function delRecord(pid, rid){
-  if(!confirm('删除这条数据记录？')) return;
-  var p=researchGet(pid); if(!p) return;
-  p.records=p.records.filter(function(r){ return r.id!==rid; });
-  saveAll(); closeMo(); render(); toast('已删除','ok');
+function delRecord(pid, rid, btn){
+  armDel('rec:'+pid+':'+rid, btn, function(){
+    var p=researchGet(pid); if(!p) return;
+    p.records=p.records.filter(function(r){ return r.id!==rid; });
+    saveAll(); closeMo(); render(); toast('已删除','ok');
+  });
 }
 function exportResearchCSV(pid){
   var p=researchGet(pid); if(!p) return;
@@ -5576,7 +5631,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.11-2';
+var APP_VER='2026.08.11-3';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
