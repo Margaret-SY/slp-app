@@ -169,6 +169,7 @@ svg{display:block;flex:none}
 .chip.st-active{background:var(--brand-l);color:var(--brand-d);border-color:#5eead4}
 .chip.st-waiting{background:var(--warn-l);color:#b45309;border-color:var(--warn-b)}
 .chip.st-archived{background:#f1f5f9;color:var(--muted);border-color:var(--border-s)}
+.chip.st-fixed{background:#eef2ff;color:#4338ca;border-color:#c7d2fe}
 .chip.dn{background:var(--ok-l);color:#15803d;border-color:var(--ok-b)}
 .chip.lv{background:var(--warn-l);color:#b45309;border-color:var(--warn-b)}
 .chip.ab{background:var(--danger-l);color:var(--danger);border-color:var(--danger-b)}
@@ -2574,9 +2575,11 @@ function doEndCourse(id){
     var mx=0; KIDS.forEach(function(x){ if(x.status==='waiting') mx=Math.max(mx,(x.queueOrder||0)+1); });
     k.queueOrder=mx;
   }
+  var _cleaned = endRoundCleanup(k.id);
   if(!saveAll()){ toast('保存失败，数据未写入。请检查浏览器存储或先导出备份','err',6000); return; }
   closeMo(); render();
-  toast(next==='archived'?'已结案归档':'已转入排队列表','ok');
+  var _msg = (next==='archived'?'已结案归档':'已转入排队列表') + (_cleaned>0?(' · 已清除剩余 '+_cleaned+' 条预约'):'');
+  toast(_msg,'ok');
 }
 
 /* ==================================================================
@@ -2585,6 +2588,29 @@ function doEndCourse(id){
 function bookById(bid){ var b=null; BOOKS.forEach(function(x){ if(x.id===bid) b=x; }); return b; }
 function bookOn(ds){ return BOOKS.filter(function(b){ return b.date===ds; }); }
 function bookStLbl(st){ return ({wait:'候诊·未到',arrived:'已到诊·建档',no:'爽约未到',cancel:'已取消'})[st]||st; }
+
+function addDays(ds,n){ var d=parseD(ds); d.setDate(d.getDate()+n); return fmtD(d); }
+/* 首次到诊后，按固定星期+时间自动生成未来 N 周的预约；遇停诊日顺延一周（最多顺延 24 周） */
+function genSeries(kidId, startDs, wk, tStart, tEnd, count){
+  for(var i=1;i<=count;i++){
+    var ds=addDays(startDs,7*i), guard=0;
+    while(CLOSED.some(function(c){ return c.date===ds; }) && guard<24){ ds=addDays(ds,7); guard++; }
+    BOOKS.push({
+      id:uid(), name:kidName(kidId), date:ds,
+      tStart:tStart, tEnd:tEnd, time:(tStart?tStart:'')+(tEnd?('–'+tEnd):''),
+      status:'wait', kidId:kidId, source:'固定排课', seriesStart:startDs, createdAt:TODAY
+    });
+  }
+}
+/* 一轮结束 / 转排队时，清除该孩子剩余的未来预约。
+   按 kidId 精确匹配——一对二时只删这一个人，绝不波及同场另一个孩子。 */
+function endRoundCleanup(kidId){
+  var before=BOOKS.length;
+  BOOKS = BOOKS.filter(function(b){
+    return !(b.kidId===kidId && b.status==='wait' && b.date>TODAY);
+  });
+  return before-BOOKS.length;
+}
 
 function bookRow(b){
   var overdue = (b.status==='wait' && b.date<TODAY);
@@ -2596,6 +2622,7 @@ function bookRow(b){
         '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+dotC+';flex-shrink:0"></span>'+
         '<b>'+esc(b.name)+'</b>'+
         '<span class="'+chipCls+'">'+bookStLbl(b.status)+'</span>'+
+        (b.source==='固定排课'?'<span class="chip st-fixed">固定</span>':'')+
         (overdue?'<span class="chip ab">逾期 '+daysBetween(b.date,TODAY)+' 天</span>':'')+
       '</div>'+
       '<div class="bk-s">'+esc(md(b.date))+(b.time?' '+esc(b.time):'')+' · '+(b.source||'预约')+
@@ -2606,7 +2633,8 @@ function bookRow(b){
     h+='<button class="btn sm pri" onclick="bookArrive(\''+b.id+'\')">已到诊 · 建档</button>'+
        '<button class="btn sm dan" onclick="setBookSt(\''+b.id+'\',\'no\',this)">爽约未到</button>'+
        '<button class="btn sm" onclick="openBookForm(\''+b.id+'\')">改期 / 编辑</button>'+
-       '<button class="btn sm" onclick="setBookSt(\''+b.id+'\',\'cancel\',this)">取消</button>';
+       '<button class="btn sm" onclick="setBookSt(\''+b.id+'\',\'cancel\',this)">取消</button>'+
+       '<button class="btn sm dan" onclick="delBook(\''+b.id+'\',this)">删除</button>';
   }else if(b.status==='arrived'){
     h+=(b.kidId?'<button class="btn sm" onclick="openKidDetail(\''+b.kidId+'\')">查看档案</button>':'<span class="bk-s">已建档</span>');
   }else{
@@ -3165,6 +3193,13 @@ function saveKid(id){
       var _bk=bookById(window.__fromBook);
       if(_bk){ _bk.status='arrived'; _bk.kidId=_nid; _bk.arrivedAt=TODAY; }
       window.__fromBook=null;
+      if(_bk){
+        var _nk=kidById(_nid);
+        if(_nk && !_nk.autoScheduled){
+          genSeries(_nid, _bk.date, parseD(_bk.date).getDay(), _bk.tStart||'', _bk.tEnd||'', 10);
+          _nk.autoScheduled=true;
+        }
+      }
     }
   }
   if(!saveAll()){ toast('保存失败，数据未写入。请检查浏览器存储或先导出备份','err',6000); return; }
@@ -5631,7 +5666,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.11-3';
+var APP_VER='2026.08.11-4';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
