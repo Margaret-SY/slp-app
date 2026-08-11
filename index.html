@@ -2057,14 +2057,27 @@ function renderTodo(){
   }).join('');
 }
 
+var __arCb=null;
+/* 内联原因输入（替代原生 prompt，规避 iOS12 PWA 下 prompt/confirm 失效） */
+function askReason(title, cb){
+  __arCb=cb;
+  var h='<div class="fg"><label>'+esc(title)+'</label><input id="arIn" class="fin" placeholder="可留空"></div>';
+  showMo(title, h,
+    '<button class="btn" onclick="closeMo();__arCb=null;">取消</button>'+
+    '<button class="btn pri" onclick="var v=(document.getElementById(\'arIn\')||{}).value||\'\';closeMo();if(__arCb){var f=__arCb;__arCb=null;f(v);}">确定</button>',
+    'narrow');
+  setTimeout(function(){ var i=document.getElementById('arIn'); if(i) i.focus(); }, 60);
+}
 /* 一键标记（把该课所有 pending 条目改成同一状态） */
 function quickMark(sid, st){
   var s=null; for(var i=0;i<SESSIONS.length;i++) if(SESSIONS[i].id===sid) s=SESSIONS[i];
   if(!s) return;
   if(st==='leave'){
-    var r = prompt('请假原因（可留空）：','');
-    if(r===null) return;
-    s.kidIds.forEach(function(id){ if(s.entries[id].status==='pending'){ s.entries[id].status='leave'; s.entries[id].reason=r||''; } });
+    askReason('请假原因（可留空）', function(r){
+      s.kidIds.forEach(function(id){ if(s.entries[id].status==='pending'){ s.entries[id].status='leave'; s.entries[id].reason=r||''; } });
+      saveAll(); render(); toast('已标记为「请假」','ok');
+    });
+    return;
   }else{
     s.kidIds.forEach(function(id){ if(s.entries[id].status==='pending') s.entries[id].status=st; });
   }
@@ -2907,8 +2920,12 @@ function markOne(sid,kid,st){
   var s=null; SESSIONS.forEach(function(x){ if(x.id===sid) s=x; });
   if(!s||!s.entries[kid]) return;
   if(st==='leave'){
-    var r=prompt('请假原因（可留空）：',''); if(r===null) return;
-    s.entries[kid].reason=r||'';
+    askReason('请假原因（可留空）', function(r){
+      s.entries[kid].status='leave';
+      s.entries[kid].reason=r||'';
+      saveAll(); render(); toast(kidName(kid)+' → 请假','ok');
+    });
+    return;
   }
   s.entries[kid].status=st;
   saveAll(); render(); toast(kidName(kid)+' → '+ST_LABEL[st],'ok');
@@ -5559,7 +5576,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.11-1';
+var APP_VER='2026.08.11-2';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
