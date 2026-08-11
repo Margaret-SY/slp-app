@@ -172,6 +172,7 @@ svg{display:block;flex:none}
 .chip.dn{background:var(--ok-l);color:#15803d;border-color:var(--ok-b)}
 .chip.lv{background:var(--warn-l);color:#b45309;border-color:var(--warn-b)}
 .chip.ab{background:var(--danger-l);color:var(--danger);border-color:var(--danger-b)}
+.chip.cl{background:#f3f4f6;color:#4b5563;border-color:#d1d5db}
 .chip.pd{background:var(--sky-l);color:#0369a1;border-color:#bae6fd}
 
 .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
@@ -270,6 +271,9 @@ select.fsel:focus{border-color:var(--brand)}
 .cal-d.out .cal-n{color:#cbd5e1}
 .cal-d.tdy{background:var(--brand-xl);box-shadow:inset 0 0 0 2px var(--brand)}
 .cal-d.sel{box-shadow:inset 0 0 0 2px var(--sky);background:var(--sky-l)}
+.cal-d.closed{background:#fef2f2;box-shadow:inset 0 0 0 2px #fca5a5}
+.cal-d.closed .cal-n{color:#dc2626}
+.cal-d.closed .cal-n:after{content:'停诊';font-size:9.5px;font-weight:700;color:#fff;background:#dc2626;border-radius:4px;padding:0 4px;margin-left:2px}
 .cal-n{font-size:12.5px;font-weight:700;color:#475569;font-variant-numeric:tabular-nums;margin-bottom:3px;display:flex;align-items:center;gap:4px}
 .cal-d.tdy .cal-n{color:var(--brand-d)}
 .cal-n .odm{width:6px;height:6px;border-radius:50%;background:var(--danger)}
@@ -278,6 +282,7 @@ select.fsel:focus{border-color:var(--brand)}
 .cchip.pd{background:var(--sky-l);color:#0369a1;border-left:2px solid var(--sky)}
 .cchip.lv{background:var(--warn-l);color:#b45309;border-left:2px solid var(--warn)}
 .cchip.ab{background:var(--danger-l);color:var(--danger);border-left:2px solid var(--danger)}
+.cchip.cl{background:#f3f4f6;color:#4b5563;border-left:2px solid #9ca3af}
 .cmore{font-size:10px;color:var(--faint);font-weight:700;padding-left:2px}
 @media(max-width:768px){
   .cal-d{min-height:62px;padding:3px}
@@ -358,6 +363,12 @@ select.inp{-webkit-appearance:none;appearance:none;
 .lb-hint{font-weight:600;color:var(--faint);font-size:12px;margin-left:4px}
 .kp-sel{display:flex;flex-wrap:wrap;gap:6px;min-height:38px;align-items:center;padding:6px 8px;
   border:1.5px dashed var(--border);border-radius:9px;background:#fbfcfd;margin-bottom:8px}
+.slotrow{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.slotrow select{flex:0 0 78px}
+.slotrow input[type=time]{flex:1;min-width:0}
+.slotrow .slotdash{color:var(--muted);font-weight:700}
+.slotrow .slot-x{flex:0 0 auto;width:26px;height:26px;border:0;border-radius:7px;background:#fee2e2;color:#b91c1c;font-size:15px;line-height:1;cursor:pointer}
+.slotrow .slot-x:hover{background:#fecaca}
 .kp-empty{font-size:12.5px;color:var(--faint)}
 .kp-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 6px 5px 10px;border-radius:999px;
   background:var(--brand);color:#fff;font-size:13px;font-weight:700}
@@ -866,7 +877,8 @@ html.nogap .updbar .ub-in>*+*{margin-left:10px}
 var K = {
   kids:'wb_slp_kids', sessions:'wb_slp_sessions', plans:'wb_slp_plans', pays:'wb_slp_pays',
   lib:'wb_slp_lib', assess:'wb_slp_assess', books:'wb_slp_books', learn:'wb_slp_learn', research:'wb_slp_research',
-  cfg:'wb_slp_cfg', sync:'wb_slp_sync', seeded:'wb_slp_seeded', tipDismiss:'wb_slp_tipdismiss'
+  cfg:'wb_slp_cfg', sync:'wb_slp_sync', seeded:'wb_slp_seeded', tipDismiss:'wb_slp_tipdismiss',
+  closed:'wb_slp_closed'
 };
 
 /* ---------- utils ---------- */
@@ -908,6 +920,7 @@ function saveAll(){
   ok = save(K.lib,LIB) && ok;
   ok = save(K.assess,ASSESS) && ok;
   ok = save(K.books,BOOKS) && ok;
+  ok = save(K.closed,CLOSED) && ok;
   ok = save(K.learn,LEARN) && ok;
   ok = save(K.research,RESEARCH) && ok;
   ok = save(K.cfg,CFG) && ok;
@@ -1584,12 +1597,12 @@ function applyCase(id, key){
 
 var AVA = ['#0d9488','#0ea5e9','#7c3aed','#db2777','#ea580c','#16a34a','#0369a1','#c026d3'];
 function avaColor(n){ return AVA[Math.abs(hashStr(n))%AVA.length]; }
-var ST_LABEL = {done:'已上课', pending:'待上课', leave:'请假', absent:'旷课'};
-var ST_CLS   = {done:'dn', pending:'pd', leave:'lv', absent:'ab'};
+var ST_LABEL = {done:'已上课', pending:'待上课', leave:'请假', absent:'旷课', closed:'停诊'};
+var ST_CLS   = {done:'dn', pending:'pd', leave:'lv', absent:'ab', closed:'cl'};
 // 缴费按「疗程」计：一个疗程 N 节 = N 次缴费，逐节确认，不再区分挂号批次
 
 /* ---------- state ---------- */
-var KIDS=[], SESSIONS=[], PLANS=[], PAYS=[], LIB=[], ASSESS=[], BOOKS=[], LEARN=[], RESEARCH=[], CFG={}, SYNC={};
+var KIDS=[], SESSIONS=[], PLANS=[], PAYS=[], LIB=[], ASSESS=[], BOOKS=[], LEARN=[], RESEARCH=[], CFG={}, SYNC={}, CLOSED=[];
 var VIEW='kids';
 var F = { q:'', tag:'', status:'active' };          // 档案筛选
 var LF = { kid:'', status:'', from:'', to:'' };     // 课程筛选
@@ -1605,6 +1618,7 @@ function boot(){
   LIB      = load(K.lib, []);
   ASSESS   = load(K.assess, []);
   BOOKS    = load(K.books, []);
+  CLOSED   = load(K.closed, []);
   LEARN    = load(K.learn, []);
   RESEARCH = load(K.research, []);
   CFG      = load(K.cfg, {perCourse:10, waitAlertDays:30, countLeave:false, customTags:[]});
@@ -1939,7 +1953,7 @@ function buildTodo(){
     out.push({
       lv:'nm', order:2,
       title: '今天的课：' + pend.map(kidName).join(' · '),
-      sub: s.format + ' · 上完课记得填写表现与家庭作业',
+      sub: s.format + ' · 上完课记得填写表现与家庭指导',
       acts:[{t:'填写日志', c:'btn sm pri', f:"openSession('"+s.id+"')"},
             {t:'一键已上课', c:'btn sm ok', f:"quickMark('"+s.id+"','done')"},
             {t:'请假', c:'btn sm warn', f:"quickMark('"+s.id+"','leave')"}]
@@ -2314,6 +2328,7 @@ function sessionRow(s){
     '<div class="slog-h">'+
       '<span class="slog-date">'+esc(md(s.date))+'</span>'+
       '<span class="chip">'+esc(wd(s.date))+'</span>'+
+      (s.tStart?'<span class="chip t-time">'+esc(s.tStart)+(s.tEnd?('–'+esc(s.tEnd)):'')+'</span>':'')+
       '<span class="chip t4">'+esc(s.format)+'</span>'+
       (overdue?'<span class="chip ab">逾期未记录</span>':'')+
       '<span class="sp"></span>'+
@@ -2333,7 +2348,8 @@ function sessionRow(s){
           : (e.content||e.perf||e.hw
             ? (e.content?'<div class="sfield"><b>本节内容</b><span>'+esc(e.content)+'</span></div>':'')+
               (e.perf?'<div class="sfield"><b>孩子表现</b><span>'+esc(e.perf)+'</span></div>':'')+
-              (e.hw?'<div class="sfield hw"><b>家庭作业</b><span>'+esc(e.hw)+'</span></div>':'')
+              (e.coop?'<div class="sfield"><b>配合程度</b><span>'+esc(e.coop)+'</span></div>':'')+
+              (e.hw?'<div class="sfield hw"><b>家庭指导</b><span>'+esc(e.hw)+'</span></div>':'')
             : '<div class="sfield"><b></b><span style="color:#94a3b8">尚未填写内容</span></div>'))+
       '</div>';
     }).join('')+
@@ -2624,8 +2640,10 @@ function openBookForm(id, presetDate){
   h+='<div class="frow">'+
     '<div class="fg"><label>预约日期 <span class="req">*</span></label>'+
       '<input class="inp" type="date" id="bkDate" value="'+esc(ds)+'"></div>'+
-    '<div class="fg"><label>时间段</label>'+
-      '<input class="inp" id="bkTime" value="'+esc(b?b.time:'')+'" placeholder="如 09:30 / 上午 / 下午"></div></div>';
+    '<div class="frow"><div class="fg"><label>开始时间</label>'+
+      '<input class="inp" type="time" id="bkStart" value="'+esc(b?b.tStart:'')+'"></div>'+
+    '<div class="fg"><label>结束时间</label>'+
+      '<input class="inp" type="time" id="bkEnd" value="'+esc(b?b.tEnd:'')+'"></div></div>';
   h+='<div class="frow">'+
     '<div class="fg"><label>疑似障碍类型</label>'+
       '<input class="inp" id="bkTag" value="'+esc(b?b.tag:'')+'" placeholder="如 语言发育迟缓 / 构音障碍">'+
@@ -2651,11 +2669,14 @@ function saveBook(id){
   if(!name){ toast('请填写预约人 / 孩子姓名','err'); var n=document.getElementById('bkName'); if(n) n.focus(); return; }
   var date=document.getElementById('bkDate').value;
   if(!date){ toast('请选择预约日期','err'); return; }
+  var ts=(document.getElementById('bkStart').value||'').trim();
+  var te=(document.getElementById('bkEnd').value||'').trim();
   var rec={
     name:name,
     phone:(document.getElementById('bkPhone').value||'').trim(),
     date:date,
-    time:(document.getElementById('bkTime').value||'').trim(),
+    tStart:ts, tEnd:te,
+    time:(ts?ts:'')+(te?('–'+te):''),
     tag:(document.getElementById('bkTag').value||'').trim(),
     source:document.getElementById('bkSource').value,
     note:(document.getElementById('bkNote').value||'').trim()
@@ -2683,7 +2704,7 @@ function bookArrive(bid){
   var b=bookById(bid);
   if(!b){ toast('预约不存在','err'); return; }
   window.__fromBook = bid;
-  openKidForm(null, {fromBook:b, name:b.name, phone:b.phone, brief:b.note, tags: b.tag?[b.tag]:[]});
+  openKidForm(null, {fromBook:b, date:b.date, tStart:b.tStart, tEnd:b.tEnd, name:b.name, phone:b.phone, brief:b.note, tags: b.tag?[b.tag]:[]});
 }
 
 function setBookSt(bid, st){
@@ -2692,6 +2713,43 @@ function setBookSt(bid, st){
   b.status=st;
   var msg = st==='no'?'已标记爽约未到':(st==='cancel'?'已取消该预约':(st==='wait'?'已恢复候诊':'已更新状态'));
   saveAll(); render(); toast(msg,'ok');
+}
+
+function openCloseForm(presetDate){
+  var ds = presetDate||CAL.sel||TODAY;
+  var ex = CLOSED.filter(function(c){ return c.date===ds; })[0];
+  var h='<div class="fg"><label>停诊日期 <span class="req">*</span></label>'+
+    '<input class="inp" type="date" id="clDate" value="'+esc(ds)+'"></div>'+
+    '<div class="fg"><label>说明（可选）</label>'+
+    '<input class="inp" id="clNote" value="'+esc(ex?ex.note:'')+'" placeholder="如 外出开会 / 休假"></div>'+
+    '<div class="hint">停诊日会在日历上标红。当天已有的「待上课」可一键标记为停诊；孩子固定时间当天来不了，请家长改期或顺延。</div>';
+  showMo(ex?'编辑停诊日 — '+esc(ds):'标记停诊日', h,
+    (ex?'<button class="btn dan" onclick="delClose(\''+ds+'\')" style="margin-right:auto">删除</button>':'')+
+    '<button class="btn" onclick="closeMo()">取消</button>'+
+    '<button class="btn pri" onclick="saveClose()">保存</button>');
+}
+function saveClose(){
+  var ds=document.getElementById('clDate').value;
+  if(!ds){ toast('请选择停诊日期','err'); return; }
+  var note=(document.getElementById('clNote').value||'').trim();
+  CLOSED = CLOSED.filter(function(c){ return c.date!==ds; });
+  CLOSED.push({date:ds, note:note});
+  if(!saveAll()){ toast('保存失败','err',5000); return; }
+  closeMo(); render(); toast('已标记停诊：'+ds,'ok');
+}
+function delClose(ds){
+  CLOSED = CLOSED.filter(function(c){ return c.date!==ds; });
+  if(!saveAll()){ toast('保存失败','err',5000); return; }
+  closeMo(); render(); toast('已取消停诊标记');
+}
+function closeDaySessions(ds){
+  var ss=sessionsOn(ds); var n=0;
+  ss.forEach(function(s){ s.kidIds.forEach(function(id){
+    var e=s.entries[id]; if(e && e.status==='pending'){ e.status='closed'; n++; }
+  }); });
+  if(!n){ toast('当天没有「待上课」需要标记'); return; }
+  if(!saveAll()){ toast('保存失败','err',5000); return; }
+  render(); toast('已将 '+n+' 节待上课标记为停诊','ok');
 }
 
 /* ==================================================================
@@ -2707,12 +2765,14 @@ function viewAttend(){
       '<span class="m">'+CAL.y+' 年 '+(CAL.m+1)+' 月</span>'+
       '<button class="btn sm icon" onclick="calMove(1)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></button>'+
       '<button class="btn sm" onclick="calToday()">回到本月</button>'+
+      '<button class="btn sm dan" onclick="openCloseForm()">⛔ 标记停诊日</button>'+
     '</div></div><div class="card-b">'+calendarHTML()+
     '<div class="legend">'+
       '<span><i style="background:#16a34a"></i>已上课</span>'+
       '<span><i style="background:#0ea5e9"></i>待上课/已排</span>'+
       '<span><i style="background:#d97706"></i>请假</span>'+
       '<span><i style="background:#dc2626"></i>旷课</span>'+
+      '<span><i style="background:#9ca3af"></i>停诊</span>'+
       '<span><i style="background:#7c3aed"></i>预约候诊</span>'+
       '<span style="margin-left:auto">点任意日期查看当天详情并排课</span>'+
     '</div></div></div>';
@@ -2780,7 +2840,8 @@ function calendarHTML(){
     });
     var hasOverdue = (ds<TODAY && items.some(function(x){return x.st==='pending';}))
       || (ds<TODAY && bookOn(ds).some(function(b){ return b.status==='wait'; }));
-    var cls='cal-d'+(out?' out':'')+(ds===TODAY?' tdy':'')+(ds===CAL.sel?' sel':'');
+    var isClosed = CLOSED.some(function(c){ return c.date===ds; });
+    var cls='cal-d'+(out?' out':'')+(ds===TODAY?' tdy':'')+(ds===CAL.sel?' sel':'')+(isClosed?' closed':'');
     h+='<div class="'+cls+'" onclick="calPick(\''+ds+'\')">'+
       '<div class="cal-n">'+d.getDate()+(hasOverdue?'<span class="odm"></span>':'')+'</div>'+
       items.slice(0,3).map(function(x){
@@ -2801,6 +2862,13 @@ function dayPanel(){
     '<span class="sp"></span>'+
     '<button class="btn sm" onclick="openBookForm(null,\''+ds+'\')">＋ 预约登记</button>'+
     '<button class="btn sm pri" onclick="openSession(null,null,\''+ds+'\')">在这天排课 / 记课</button></div><div class="card-b">';
+  var _cl = CLOSED.filter(function(c){ return c.date===ds; })[0];
+  if(_cl){
+    h+='<div class="notice warn" style="margin:0 0 12px">⛔ <b>今日停诊</b>'+( _cl.note?('：'+esc(_cl.note)):'')+
+      '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">'+
+      '<button class="btn sm dan" onclick="closeDaySessions(\''+ds+'\')">把今天待上课标记停诊</button>'+
+      '<button class="btn sm" onclick="openCloseForm(\''+ds+'\')">编辑 / 取消停诊</button></div></div>';
+  }
   h+=dayBookHTML(ds);
   if(!ss.length){
     h+='<div class="mini-note">'+(bookOn(ds).length
@@ -2821,7 +2889,9 @@ function dayPanel(){
             (e.status==='pending'
               ? '<button class="btn sm ok" onclick="markOne(\''+s.id+'\',\''+id+'\',\'done\')" style="height:30px;padding:0 10px;font-size:12px">已上课</button>'+
                 '<button class="btn sm warn" onclick="markOne(\''+s.id+'\',\''+id+'\',\'leave\')" style="height:30px;padding:0 10px;font-size:12px">请假</button>'+
-                '<button class="btn sm dan" onclick="markOne(\''+s.id+'\',\''+id+'\',\'absent\')" style="height:30px;padding:0 10px;font-size:12px">旷课</button>'
+                '<button class="btn sm dan" onclick="markOne(\''+s.id+'\',\''+id+'\',\'absent\')" style="height:30px;padding:0 10px;font-size:12px">旷课</button>'+
+                '<button class="btn sm" onclick="openSession(\''+s.id+'\')" style="height:30px;padding:0 10px;font-size:12px">改期</button>'+
+                '<button class="btn sm" onclick="markOne(\''+s.id+'\',\''+id+'\',\'closed\')" style="height:30px;padding:0 10px;font-size:12px">停诊</button>'
               : '')+
           '</div>'+
           (e.content?'<div class="sfield"><b>本节内容</b><span>'+esc(e.content)+'</span></div>':'')+
@@ -2906,10 +2976,34 @@ document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeMo();
    档案表单
    ================================================================== */
 var _tagSel=[];
+var _slotEdits=[];
+function slotRowsHTML(){
+  if(!_slotEdits.length) _slotEdits=[{wk:1,tStart:'',tEnd:''}];
+  var WK=['周日','周一','周二','周三','周四','周五','周六'];
+  var rows=_slotEdits.map(function(sl,i){
+    return '<div class="slotrow">'+
+      '<select class="inp" onchange="_slotEdits['+i+'].wk=this.value">'+
+        WK.map(function(w,wi){ return '<option value="'+wi+'"'+(String(sl.wk)===String(wi)?' selected':'')+'>'+w+'</option>'; }).join('')+
+      '</select>'+
+      '<input class="inp" type="time" value="'+esc(sl.tStart||'')+'" onchange="_slotEdits['+i+'].tStart=this.value" placeholder="开始">'+
+      '<span class="slotdash">–</span>'+
+      '<input class="inp" type="time" value="'+esc(sl.tEnd||'')+'" onchange="_slotEdits['+i+'].tEnd=this.value" placeholder="结束">'+
+      (_slotEdits.length>1?'<button type="button" class="slot-x" onclick="delSlotRow('+i+')" title="删除该时间">×</button>':'')+
+    '</div>';
+  }).join('');
+  return rows + '<button type="button" class="btn sm" onclick="addSlotRow()">＋ 添加固定时间</button>';
+}
+function addSlotRow(){ _slotEdits.push({wk:1,tStart:'',tEnd:''}); var w=document.getElementById('slotWrap'); if(w) w.innerHTML=slotRowsHTML(); }
+function delSlotRow(i){ _slotEdits.splice(i,1); if(!_slotEdits.length) _slotEdits=[{wk:1,tStart:'',tEnd:''}]; var w=document.getElementById('slotWrap'); if(w) w.innerHTML=slotRowsHTML(); }
 function openKidForm(id, preset){
   var k = id?kidById(id):null;
   var pre = preset||{};
   _tagSel = k?(k.tags||[]).slice():((pre.tags||[]).slice());
+  _slotEdits = k ? (k.slots||[]).map(function(s){ return {wk:s.wk, tStart:s.tStart||'', tEnd:s.tEnd||''}; }) : [];
+  if(pre.fromBook && pre.fromBook.date){
+    var _wd = parseD(pre.fromBook.date).getDay();
+    _slotEdits = [{ wk:_wd, tStart:pre.fromBook.tStart||'', tEnd:pre.fromBook.tEnd||'' }];
+  }
 
   var b='';
   if(!k && pre.fromBook){
@@ -2931,6 +3025,10 @@ function openKidForm(id, preset){
     '<div class="fg"><label>治疗形式</label><select class="inp" id="kFormat">'+
       FORMATS.map(function(f){ return '<option value="'+f+'"'+(k&&k.format===f?' selected':'')+'>'+f+'</option>'; }).join('')+
     '</select><div class="hint">这里是默认形式，每节课仍可单独切换</div></div></div>';
+
+  b+='<div class="fg"><label>固定上课时间（每周）</label>'+
+    '<div class="hint">孩子一般固定某天某点上课。排课时这个点会自动带出，不用每次手填。可加多个（如一周两次不同时间）。</div>'+
+    '<div id="slotWrap">'+slotRowsHTML()+'</div></div>';
 
   b+='<div class="frow"><div class="fg"><label>建档日期（接案日）</label><input class="inp" type="date" id="kIntake" value="'+esc(k&&k.createdAt||'')+'"><div class="hint">用于「新接案」统计；留空则默认今天</div></div></div>';
 
@@ -3012,6 +3110,7 @@ function saveKid(id){
     k.format=document.getElementById('kFormat').value;
     k.tags=_tagSel.slice();
     k.brief=document.getElementById('kBrief').value;
+    k.slots=_slotEdits.filter(function(s){ return (s.tStart||s.tEnd); }).map(function(s){ return {wk:+s.wk, tStart:s.tStart||'', tEnd:s.tEnd||''}; });
     k.createdAt = document.getElementById('kIntake').value || k.createdAt;
     k.perCourse=per;
     var q=parseInt(document.getElementById('kQuota').value,10);
@@ -3028,6 +3127,7 @@ function saveKid(id){
       format:document.getElementById('kFormat').value,
       tags:_tagSel.slice(),
       brief:document.getElementById('kBrief').value,
+      slots:_slotEdits.filter(function(s){ return (s.tStart||s.tEnd); }).map(function(s){ return {wk:+s.wk, tStart:s.tStart||'', tEnd:s.tEnd||''}; }),
       status:'active', courseNo:1, perCourse:per,
       usedBase:base, quotaTotal:base+per, courseStartUsed:base,
       createdAt:(document.getElementById('kIntake').value||TODAY), courseStartAt:TODAY, history:[]
@@ -3141,7 +3241,7 @@ function openKidDetail(id){
     '<button class="btn sm" onclick="closeMo();openSession(null,\''+id+'\')">记一节课</button></h4>'+
     (ss.length?'<div class="scroll-y">'+ss.map(function(s){
       var e=s.entries[id]||{};
-      return '<div class="hist"><div class="hist-h">'+esc(md(s.date))+' '+esc(wd(s.date))+
+      return '<div class="hist"><div class="hist-h">'+esc(md(s.date))+' '+esc(wd(s.date))+(s.tStart?(' · '+esc(s.tStart)+(s.tEnd?('–'+esc(s.tEnd)):'')):'')+
         '<span class="chip '+(ST_CLS[e.status]||'')+'">'+(ST_LABEL[e.status]||'—')+'</span>'+
         '<span class="chip t4">'+esc(s.format)+'</span>'+
         (s.kidIds.length>1?'<span class="chip">同伴：'+esc(s.kidIds.filter(function(x){return x!==id;}).map(kidName).join('、'))+'</span>':'')+
@@ -3218,20 +3318,26 @@ var _sf = null;  // {id,date,format,kidIds,entries}
 function openSession(sid, presetKid, presetDate){
   var s=null; if(sid) SESSIONS.forEach(function(x){ if(x.id===sid) s=x; });
   if(s){
-    _sf = { id:s.id, date:s.date, format:s.format, kidIds:s.kidIds.slice(),
+    _sf = { id:s.id, date:s.date, tStart:s.tStart||'', tEnd:s.tEnd||'', format:s.format, kidIds:s.kidIds.slice(),
             entries: JSON.parse(JSON.stringify(s.entries)), imgs:(s.imgs||[]).slice() };
   }else{
     var pk = presetKid?kidById(presetKid):null;
-    _sf = { id:null, date: presetDate||TODAY,
+    _sf = { id:null, date: presetDate||TODAY, tStart:'', tEnd:'',
             format: pk?(pk.format||'一对一'):'一对一',
             kidIds: pk?[pk.id]:[], entries:{}, imgs:[] };
     if(pk) _sf.entries[pk.id]=blankEntry();
+    if(pk && pk.slots && pk.slots.length){
+      var _wd = parseD(_sf.date).getDay();
+      var _sl = pk.slots[0];
+      pk.slots.forEach(function(x){ if(+x.wk===_wd) _sl=x; });
+      _sf.tStart = _sl.tStart||''; _sf.tEnd = _sl.tEnd||'';
+    }
   }
   window.__stageKey='';
   _sf.q=''; _sf.showAll=false;
   drawSessionForm();
 }
-function blankEntry(){ return {status:'done',content:'',perf:'',hw:'',reason:'',nextPlan:'',promote:false}; }
+function blankEntry(){ return {status:'done',content:'',perf:'',coop:'',hw:'',reason:'',nextPlan:'',promote:false}; }
 
 function drawSessionForm(){
   var maxN = _sf.format==='一对一'?1:(_sf.format==='一对二'?2:8);
@@ -3244,6 +3350,13 @@ function drawSessionForm(){
       '<div class="segm" id="sfFormat">'+FORMATS.map(function(f){
         return '<button type="button" class="'+(_sf.format===f?'on':'')+'" data-v="'+f+'" onclick="pickFormat(\''+f+'\')">'+f+'</button>'; }).join('')+
       '</div></div></div>';
+
+  b+='<div class="frow">'+
+    '<div class="fg"><label>开始时间（约几点）</label>'+
+      '<input class="inp" type="time" id="sfTStart" value="'+esc(_sf.tStart||'')+'" onchange="_sf.tStart=this.value"></div>'+
+    '<div class="fg"><label>结束时间（到几点）</label>'+
+      '<input class="inp" type="time" id="sfTEnd" value="'+esc(_sf.tEnd||'')+'" onchange="_sf.tEnd=this.value"></div>'+
+    '</div>';
 
   b+=kidPickBlock(maxN);
 
@@ -3287,7 +3400,7 @@ function entryBlock(id,idx){
       '<strong>'+esc(kidName(id))+'</strong>'+
       (_sf.kidIds.length>1?'<span class="chip">第 '+(idx+1)+' 位</span>':'')+
       '<span class="sp"></span>'+
-      '<div class="stpick">'+['done','pending','leave','absent'].map(function(st){
+      '<div class="stpick">'+['done','pending','leave','absent','closed'].map(function(st){
         return '<button type="button" data-v="'+st+'" class="'+(e.status===st?'on':'')+'" onclick="setEStatus(\''+id+'\',\''+st+'\')">'+ST_LABEL[st]+'</button>'; }).join('')+
       '</div></div>'+
     '<div class="entry-b">'+
@@ -3299,7 +3412,12 @@ function entryBlock(id,idx){
             '<textarea class="inp" rows="2" oninput="_sf.entries[\''+id+'\'].content=this.value" placeholder="训练目标、使用教具、活动流程……">'+esc(e.content)+'</textarea></div>'+
           '<div class="fg"><label>孩子表现'+aiBtnHTML('孩子表现',id)+'</label>'+
             '<textarea class="inp" rows="2" oninput="_sf.entries[\''+id+'\'].perf=this.value" placeholder="正确率、注意力时长、情绪状态、需辅助的环节……">'+esc(e.perf)+'</textarea></div>'+
-          '<div class="fg"><label>家庭作业'+aiBtnHTML('家庭作业',id)+'</label>'+
+          '<div class="fg"><label>配合程度</label>'+
+            '<select class="inp" onchange="_sf.entries[\''+id+'\'].coop=this.value">'+
+            '<option value="">— 未评 —</option>'+
+            ['优','良','中','差'].map(function(c){ return '<option value="'+c+'"'+(e.coop===c?' selected':'')+'>'+c+'</option>'; }).join('')+
+            '</select></div>'+
+          '<div class="fg"><label>家庭指导'+aiBtnHTML('家庭作业',id)+'</label>'+
             '<textarea class="inp" rows="2" oninput="_sf.entries[\''+id+'\'].hw=this.value" placeholder="给家长的具体练习任务与频次">'+esc(e.hw)+'</textarea></div>'+
           '<div class="fg"><label>下一步计划'+aiBtnHTML('下一步计划',id)+
             (curPlan?'<span style="font-weight:600;color:var(--faint);font-size:12px">（当前：'+esc(curPlan.stage)+'）</span>':'<span style="font-weight:600;color:var(--faint);font-size:12px">（暂无进行中的计划）</span>')+
@@ -3391,10 +3509,20 @@ function toggleKid(id){
     }
     _sf.kidIds.push(id);
     if(!_sf.entries[id]) _sf.entries[id]=blankEntry();
+    defaultTimeFromKid(id);
   }
   drawSessionForm();
 }
 function setEStatus(id,st){ _sf.entries[id].status=st; drawSessionForm(); }
+function defaultTimeFromKid(id){
+  if(_sf.tStart||_sf.tEnd) return; /* 已手动填过不覆盖 */
+  var k=kidById(id); if(!k||!k.slots||!k.slots.length) return;
+  var w=parseD(_sf.date).getDay();
+  var sl=k.slots[0]; k.slots.forEach(function(x){ if(+x.wk===w) sl=x; });
+  _sf.tStart=sl.tStart||''; _sf.tEnd=sl.tEnd||'';
+  var a=document.getElementById('sfTStart'); if(a) a.value=_sf.tStart;
+  var b=document.getElementById('sfTEnd'); if(b) b.value=_sf.tEnd;
+}
 function copyContent(){
   if(_sf.kidIds.length<2) return;
   var src=_sf.entries[_sf.kidIds[0]].content||'';
@@ -3405,12 +3533,13 @@ function saveSession(){
   if(!_sf.kidIds.length){ toast('请至少选择一个孩子','err'); return; }
   if(!_sf.date){ toast('请选择上课日期','err'); return; }
 
-  var rec = { id:_sf.id||uid(), date:_sf.date, format:_sf.format,
+  var rec = { id:_sf.id||uid(), date:_sf.date, tStart:_sf.tStart||'', tEnd:_sf.tEnd||'',
+              format:_sf.format,
               kidIds:_sf.kidIds.slice(), entries:{}, imgs:(_sf.imgs||[]).slice(), createdAt:_sf.id?undefined:TODAY };
   _sf.kidIds.forEach(function(id){
     var e=_sf.entries[id];
     rec.entries[id]={ status:e.status, content:e.content||'', perf:e.perf||'',
-                      hw:e.hw||'', reason:e.reason||'', nextPlan:e.nextPlan||'' };
+                      coop:e.coop||'', hw:e.hw||'', reason:e.reason||'', nextPlan:e.nextPlan||'' };
     /* 升级为阶段计划 */
     if(e.promote && (e.nextPlan||'').trim()){
       PLANS.forEach(function(p){
@@ -3768,7 +3897,7 @@ function collectSlp(){
 function reloadFromStorage(){
   KIDS=load(K.kids,[]); SESSIONS=load(K.sessions,[]); PLANS=load(K.plans,[]);
   PAYS=load(K.pays,[]); LIB=load(K.lib,[]); ASSESS=load(K.assess,[]);
-  BOOKS=load(K.books,[]); CFG=load(K.cfg,{}); SYNC=load(K.sync,{});
+  BOOKS=load(K.books,[]); CFG=load(K.cfg,{}); SYNC=load(K.sync,{}); CLOSED=load(K.closed,[]);
   if(CFG.perCourse==null) CFG.perCourse=10;
   if(CFG.waitAlertDays==null) CFG.waitAlertDays=30;
   if(CFG.countLeave==null) CFG.countLeave=false;
@@ -4231,7 +4360,7 @@ function pieSVG(slices, R){
 function exportCSVPeriod(){
   var yr=SF.year, mo=SF.month;
   var scopeLabel = (mo==='all') ? (yr+' 年') : (yr+' 年 '+mo+' 月');
-  var rows=[['日期','星期','上课形式','孩子','状态','本节课内容','孩子表现','家庭作业','请假/旷课原因','下一步计划']];
+  var rows=[['日期','星期','时间','上课形式','孩子','状态','本节课内容','孩子表现','配合程度','家庭指导','请假/旷课原因','下一步计划']];
   SESSIONS.filter(function(s){
     if(!s.date || s.date.slice(0,4)!==String(yr)) return false;
     if(mo!=='all' && s.date.slice(5,7)!==p2(mo)) return false;
@@ -4239,8 +4368,9 @@ function exportCSVPeriod(){
   }).slice().sort(function(a,b){ return a.date<b.date?-1:1; }).forEach(function(s){
     s.kidIds.forEach(function(id){
       var e=s.entries[id]||{};
-      rows.push([s.date, wd(s.date), s.format, kidName(id), ST_LABEL[e.status]||'',
-                 e.content||'', e.perf||'', e.hw||'', e.reason||'', e.nextPlan||'']);
+      var tt=(s.tStart||'')+(s.tEnd?('–'+s.tEnd):'');
+      rows.push([s.date, wd(s.date), tt, s.format, kidName(id), ST_LABEL[e.status]||'',
+                 e.content||'', e.perf||'', e.coop||'', e.hw||'', e.reason||'', e.nextPlan||'']);
     });
   });
   if(rows.length<=1){ toast('该时段没有课程记录','err'); return; }
@@ -4463,7 +4593,7 @@ function drawAssessResult(){
      '<div class="fg"><label>长期目标（每行一条，来自待提升领域的长期目标）'+aiBtnHTML('IEP长期目标',_af.kidId||'')+'</label><textarea class="inp" rows="3" id="iepLG" placeholder="每行一条">'+esc((iep.longGoals||[]).join('\n'))+'</textarea></div>'+
      '<div class="fg"><label>短期目标 SMART（来自待提升探针）'+aiBtnHTML('IEP短期目标',_af.kidId||'')+'</label><textarea class="inp" rows="4" id="iepSG" placeholder="每行一条">'+esc((iep.shortGoals||[]).join('\n'))+'</textarea></div>'+
      '<div class="fg"><label>教学策略（来自待提升领域）'+aiBtnHTML('IEP教学策略',_af.kidId||'')+'</label><textarea class="inp" rows="3" id="iepST" placeholder="每行一条">'+esc((iep.strategies||[]).join('\n'))+'</textarea></div>'+
-     '<div class="fg"><label>家庭作业（来自待提升探针）'+aiBtnHTML('IEP家庭作业',_af.kidId||'')+'</label><textarea class="inp" rows="3" id="iepHW" placeholder="每行一条">'+esc((iep.homework||[]).join('\n'))+'</textarea></div>'+
+     '<div class="fg"><label>家庭指导（来自待提升探针）'+aiBtnHTML('IEP家庭作业',_af.kidId||'')+'</label><textarea class="inp" rows="3" id="iepHW" placeholder="每行一条">'+esc((iep.homework||[]).join('\n'))+'</textarea></div>'+
      '<div class="fg"><label>评量标准'+aiBtnHTML('IEP评量标准',_af.kidId||'')+'</label><textarea class="inp" rows="2" id="iepMS">'+esc(iep.measure||'')+'</textarea></div>'+
      '</div>';
   return h;
@@ -4513,7 +4643,7 @@ function openAssessView(id){
   b+= iepBlock('长期目标', iep.longGoals);
   b+= iepBlock('短期目标 SMART', iep.shortGoals);
   b+= iepBlock('教学策略', iep.strategies);
-  b+= iepBlock('家庭作业', iep.homework);
+  b+= iepBlock('家庭指导', iep.homework);
   b+= iepBlock('评量标准', [iep.measure]);
   b+='</div>';
   showMo('评估详情', b,
@@ -4760,17 +4890,19 @@ function buildKidReportHTML(kidId){
     detail+='<div class="rpt-empty" style="padding:12px">暂无课程记录</div>';
   }else{
     detail+='<table class="rpt-tb"><thead><tr>'+
-      '<th>日期</th><th>形式</th><th>考勤</th><th>治疗内容</th><th>课堂表现</th><th>家庭作业</th><th>缴费</th></tr></thead><tbody>';
+      '<th>日期</th><th>时间</th><th>形式</th><th>考勤</th><th>治疗内容</th><th>课堂表现</th><th>配合程度</th><th>家庭指导</th><th>缴费</th></tr></thead><tbody>';
     ss.forEach(function(s){
       var e=s.entries[kidId]||{};
       var pay=PAYS.filter(function(p){ return p.sessionId===s.id && p.kidId===kidId; })[0];
       var payTxt=pay?('已确认'+(pay.verifyDate?(' / 核对 '+pay.verifyDate):'')):'待确认';
       detail+='<tr>'+
         '<td>'+esc(s.date)+'<br><span class="rpt-dim">'+esc(wd(s.date))+'</span></td>'+
+        '<td>'+(s.tStart?esc(s.tStart)+(s.tEnd?('–'+esc(s.tEnd)):'')+'':'')+'</td>'+
         '<td>'+esc(s.format)+'</td>'+
         '<td>'+esc(ST_LABEL[e.status]||'—')+'</td>'+
         '<td class="rpt-mult">'+esc(e.content||'')+'</td>'+
         '<td class="rpt-mult">'+esc(e.perf||'')+'</td>'+
+        '<td>'+esc(e.coop||'')+'</td>'+
         '<td class="rpt-mult">'+esc(e.hw||'')+'</td>'+
         '<td>'+esc(payTxt)+'</td>'+
       '</tr>';
@@ -4864,7 +4996,7 @@ function openReport(){
     '<div class="fg"><label>结束日期</label><input class="inp" type="date" id="rpTo" value="'+to+'"></div></div>'+
     '<label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-top:6px;cursor:pointer">'+
       '<input type="checkbox" id="rpArc" style="width:17px;height:17px"> 包含已结案 / 归档的孩子档案</label>'+
-    '<div class="hint" style="margin-top:8px">报表包含：区间内每一次治疗的日期 / 形式 / 儿童 / 内容 / 表现 / 家庭作业 / 考勤 / 缴费确认，以及每个孩子最新的评估与 IEP、签字栏。可用于医保检查留档。</div>';
+    '<div class="hint" style="margin-top:8px">报表包含：区间内每一次治疗的日期 / 形式 / 儿童 / 内容 / 表现 / 家庭指导 / 考勤 / 缴费确认，以及每个孩子最新的评估与 IEP、签字栏。可用于医保检查留档。</div>';
   showMo('生成治疗记录报表（医保 / 检查用）', h,
     '<button class="btn" onclick="closeMo()">取消</button>'+
     '<button class="btn pri" onclick="openReportPreview()">生成预览</button>', 'lg');
@@ -4936,7 +5068,7 @@ function buildReportHTML(from,to,withArc){
     detail+='<div class="rpt-empty" style="padding:14px;color:#94a3b8">本区间（'+esc(from)+' 至 '+esc(to)+'）没有治疗记录。</div>';
   }else{
     detail+='<table class="rpt-tb"><thead><tr>'+
-      '<th>日期</th><th>形式</th><th>儿童</th><th>治疗内容</th><th>课堂表现</th><th>家庭作业</th><th>考勤</th><th>缴费确认</th>'+
+      '<th>日期</th><th>时间</th><th>形式</th><th>儿童</th><th>治疗内容</th><th>课堂表现</th><th>配合程度</th><th>家庭指导</th><th>考勤</th><th>缴费确认</th>'+
       '</tr></thead><tbody>';
     sess.forEach(function(s){
       s.kidIds.forEach(function(id){
@@ -4946,10 +5078,12 @@ function buildReportHTML(from,to,withArc){
         var payTxt = pay ? ('已确认 ¥'+pay.amount+(pay.verifyDate?(' / 核对 '+pay.verifyDate):'')) : '待确认';
         detail+='<tr>'+
           '<td>'+esc(s.date)+'<br><span class="rpt-dim">'+esc(wd(s.date))+'</span></td>'+
+          '<td>'+(s.tStart?esc(s.tStart)+(s.tEnd?('–'+esc(s.tEnd)):'')+'':'')+'</td>'+
           '<td>'+esc(s.format)+'</td>'+
           '<td>'+esc(k?k.name:'（已删除）')+'</td>'+
           '<td class="rpt-mult">'+esc(e.content||'')+'</td>'+
           '<td class="rpt-mult">'+esc(e.perf||'')+'</td>'+
+          '<td>'+esc(e.coop||'')+'</td>'+
           '<td class="rpt-mult">'+esc(e.hw||'')+'</td>'+
           '<td>'+esc(ST_LABEL[e.status]||'—')+'</td>'+
           '<td>'+esc(payTxt)+'</td>'+
@@ -5088,12 +5222,13 @@ function confirmImport(){
 }
 
 function exportCSV(){
-  var rows=[['日期','星期','上课形式','孩子','状态','本节课内容','孩子表现','家庭作业','请假/旷课原因','下一步计划']];
+  var rows=[['日期','星期','时间','上课形式','孩子','状态','本节课内容','孩子表现','配合程度','家庭指导','请假/旷课原因','下一步计划']];
   SESSIONS.slice().sort(function(a,b){ return a.date<b.date?-1:1; }).forEach(function(s){
     s.kidIds.forEach(function(id){
       var e=s.entries[id]||{};
-      rows.push([s.date, wd(s.date), s.format, kidName(id), ST_LABEL[e.status]||'',
-                 e.content||'', e.perf||'', e.hw||'', e.reason||'', e.nextPlan||'']);
+      var tt=(s.tStart||'')+(s.tEnd?('–'+s.tEnd):'');
+      rows.push([s.date, wd(s.date), tt, s.format, kidName(id), ST_LABEL[e.status]||'',
+                 e.content||'', e.perf||'', e.coop||'', e.hw||'', e.reason||'', e.nextPlan||'']);
     });
   });
   var csv=rows.map(function(r){
@@ -5424,7 +5559,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.08-14';
+var APP_VER='2026.08.11-1';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
