@@ -102,13 +102,13 @@ svg{display:block;flex:none}
 }
 /* ============ 提醒区块 ============ */
 .remind-h{background:linear-gradient(90deg,#fef3c7,#fff)}
-.rItem{display:flex;align-items:flex-start;gap:11px;padding:10px 12px;border-radius:var(--r-s);margin-bottom:8px;border:1px solid #fde68a;background:#fffbeb}
+.rItem{display:flex;align-items:flex-start;gap:11px;padding:10px 12px;border-radius:var(--r-s);margin-bottom:8px;border:1px solid #fde68a;background:#fffbeb;flex-wrap:wrap}
 .rItem:last-child{margin-bottom:0}
 .rItem.done{border-color:var(--ok-b);background:var(--ok-l);opacity:.7}
 .rItem .rChk{width:20px;height:20px;border-radius:6px;border:2px solid #d97706;flex:none;margin-top:1px;cursor:pointer;background:#fff;display:flex;align-items:center;justify-content:center;color:#16a34a;font-weight:900;font-size:13px}
 .rItem.done .rChk{border-color:var(--ok)}
 .rMain{flex:1;min-width:0}
-.rText{font-size:14.5px;line-height:1.45;color:#1f2937;font-weight:600}
+.rText{font-size:14.5px;line-height:1.45;color:#1f2937;font-weight:600;word-break:break-word;overflow-wrap:anywhere;white-space:pre-line}
 .rItem.done .rText{text-decoration:line-through;color:#64748b;font-weight:500}
 .rSub{font-size:12px;color:var(--muted);margin-top:3px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
 .rcat{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px}
@@ -121,6 +121,7 @@ svg{display:block;flex:none}
 .rActs{display:flex;gap:6px;flex:none;align-items:center}
 .rEmpty{font-size:13px;color:var(--muted);padding:6px 2px 2px}
 @media(max-width:600px){
+  .rItem{flex-wrap:wrap}
   .rActs{width:100%;padding-left:31px;margin-top:7px}
   html.nogap .rActs>*+*{margin-left:6px}
 }
@@ -1731,9 +1732,9 @@ function ageOf(b){
    ================================================================== */
 function seedReminders(){
   var samples=[
-    {id:uid(), text:'尽快安排王天天上课（暂无空档，等腾出时段）', cat:'排课', date:'', note:'家长希望继续巩固流畅度', kidId:'k4', done:false, createdAt:TODAY},
-    {id:uid(), text:'准备下颌骨稳定训练（口肌）教具：压舌板+小冰块', cat:'语训', date:dOff(3), note:'下周构音课要用', done:false, createdAt:TODAY},
-    {id:uid(), text:'回家长微信群发本周家庭指导语音', cat:'其他', date:'', note:'', done:false, createdAt:TODAY}
+    {id:uid(), text:'尽快安排王天天上课（暂无空档，等腾出时段）', cat:'排课', date:'', note:'家长希望继续巩固流畅度', kidId:'k4', addedBy:'seed', done:false, createdAt:TODAY},
+    {id:uid(), text:'准备下颌骨稳定训练（口肌）教具：压舌板+小冰块', cat:'语训', date:dOff(3), note:'下周构音课要用', addedBy:'seed', done:false, createdAt:TODAY},
+    {id:uid(), text:'回家长微信群发本周家庭指导语音', cat:'其他', date:'', note:'', addedBy:'seed', done:false, createdAt:TODAY}
   ];
   REMINDERS=REMINDERS.concat(samples);
   save(K.reminders,REMINDERS);
@@ -1983,7 +1984,8 @@ function buildTodo(){
       title:(r.cat?('【'+r.cat+'】'):'')+r.text,
       sub:label+(r.note?(' · '+r.note):'')+(r.kidId?(' · '+kidName(r.kidId)):''),
       acts:[{t:'完成', c:'btn sm ok', f:"toggleReminder('"+r.id+"')"},
-            {t:'编辑', c:'btn sm', f:"openReminderForm('"+r.id+"')"}]
+            {t:'编辑', c:'btn sm', f:"openReminderForm('"+r.id+"')"},
+            {t:'删除', c:'btn sm dan', f:"delReminder('"+r.id+"',this)"}]
     });
   });
   // 1) 逾期未记录的课
@@ -2294,7 +2296,7 @@ function scrollTop0(){
 }
 function render(){
   clearDelArmed();
-  renderTip(); renderTodo();
+  renderTip(); renderTodo(); renderReminders();
   document.getElementById('cKids').textContent = KIDS.filter(function(k){return k.status!=='archived';}).length;
   document.getElementById('cLogs').textContent = SESSIONS.length;
   document.getElementById('cCourse').textContent = KIDS.filter(function(k){return k.status==='active';}).length;
@@ -2811,6 +2813,16 @@ function genSeries(kidId, startDs, wk, tStart, tEnd, count){
       status:'scheduled', kidId:kidId, source:'固定排课', seriesStart:startDs, createdAt:TODAY
     });
   }
+}
+/* 新建档案时，把"固定上课时间"直接落成未来固定预约（scheduled），同步进考勤日历 */
+function genBookingsForSlots(kidId, slots, weeks){
+  slots.forEach(function(sl){
+    if(!(sl.tStart||sl.tEnd)) return;
+    var wk=(+sl.wk)%7;
+    var diff=(wk - parseD(TODAY).getDay() + 7)%7;
+    var first = diff===0 ? TODAY : addDays(TODAY, diff);
+    genSeries(kidId, addDays(first,-7), wk, sl.tStart||'', sl.tEnd||'', weeks);
+  });
 }
 /* 一轮结束 / 转排队时，清除该孩子剩余的未来预约。
    按 kidId 精确匹配——一对二时只删这一个人，绝不波及同场另一个孩子。 */
@@ -3437,6 +3449,7 @@ function saveKid(id){
   }else{
     var base=parseInt(document.getElementById('kBase').value,10)||0;
     var _nid=uid();
+    var _newSlots=_slotEdits.filter(function(s){ return (s.tStart||s.tEnd); });
     KIDS.push({
       id:_nid, name:name,
       gender:document.getElementById('kGender').value,
@@ -3451,6 +3464,10 @@ function saveKid(id){
       usedBase:base, quotaTotal:base+per, courseStartUsed:base,
       createdAt:(document.getElementById('kIntake').value||TODAY), courseStartAt:TODAY, history:[]
     });
+    if(!window.__fromBook && _newSlots.length){
+      genBookingsForSlots(_nid, _newSlots, 10);
+      var _nk2=kidById(_nid); if(_nk2) _nk2.autoScheduled=true;
+    }
     if(window.__fromBook){
       var _bk=bookById(window.__fromBook);
       if(_bk){ _bk.status='arrived'; _bk.kidId=_nid; _bk.arrivedAt=TODAY; }
@@ -5587,7 +5604,12 @@ function exportCSV(){
 
 function clearDemo(btn){
   var demoK=['k1','k2','k3','k4','k5'];
-  var has=KIDS.some(function(k){ return demoK.indexOf(k.id)>=0; }) || LEARN.some(function(l){ return l.addedBy==='seed'; });
+  var has = KIDS.some(function(k){ return demoK.indexOf(k.id)>=0; })
+    || LEARN.some(function(l){ return l.addedBy==='seed'; })
+    || BOOKS.some(function(b){ return demoK.indexOf(b.kidId)>=0; })
+    || REMINDERS.some(function(r){ return r.addedBy==='seed'; })
+    || PAYS.some(function(p){ return demoK.indexOf(p.kidId)>=0; })
+    || ASSESS.some(function(a){ return demoK.indexOf(a.kidId)>=0; });
   if(!has){ toast('没有检测到示例数据'); return; }
   armDel('clearDemo', btn, function(){
     KIDS=KIDS.filter(function(k){ return demoK.indexOf(k.id)<0; });
@@ -5597,7 +5619,11 @@ function clearDemo(btn){
       demoK.forEach(function(id){ delete s.entries[id]; });
     });
     SESSIONS=SESSIONS.filter(function(s){ return s.kidIds.length>0; });
+    BOOKS=BOOKS.filter(function(b){ return demoK.indexOf(b.kidId)<0; });
+    PAYS=PAYS.filter(function(p){ return demoK.indexOf(p.kidId)<0; });
+    ASSESS=ASSESS.filter(function(a){ return demoK.indexOf(a.kidId)<0; });
     LEARN=LEARN.filter(function(l){ return l.addedBy!=='seed'; });
+    REMINDERS=REMINDERS.filter(function(r){ return r.addedBy!=='seed'; });
     saveAll(); closeMo(); render(); toast('示例数据已清空','ok');
   }, '确认清空示例?');
 }
@@ -5932,7 +5958,7 @@ function aiResearch(pid){
    版本 / 自动更新 / iOS12 flex-gap 兜底
    （iPad 加到主屏后无法手动刷新，必须让 App 自己发现新版并更新）
    ================================================================== */
-var APP_VER='2026.08.11-8';
+var APP_VER='2026.08.13-1';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
