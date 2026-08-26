@@ -4798,6 +4798,7 @@ var _af = { id:null, kidId:'', date:'', types:[], scored:{}, notes:{}, iep:null,
 function assessById(id){ var r=null; for(var i=0;i<ASSESS.length;i++){ if(ASSESS[i].id===id){ r=ASSESS[i]; break; } } return r; }
 
 function assessSummary(af){
+  if(af && af.wsSum) return af.wsSum;   // BCBA 工作台评估：直接返回保存时算好的优劣势
   var strengths=[], weak=[], weakDoms={};
   (af.types||[]).forEach(function(t){
     var A=APROBE[t]; if(!A) return;
@@ -4881,7 +4882,7 @@ function viewAssessRecords(){
         +'<span class="chip bad">待提升 '+sum.weak.length+'</span></div>'
         +'<div class="ass-item-acts">'
         +'<button class="btn sm" onclick="openAssessView(\''+a.id+'\')">查看</button>'
-        +'<button class="btn sm" onclick="openAssessForm(\''+a.id+'\')">编辑</button>'
+        +'<button class="btn sm" onclick="'+(a.source==='worksheet' ? ('openAssessWorksheet(\''+esc(a.types[0]).replace(/'/g,"\\'")+'\',\''+a.id+'\')') : ('openAssessForm(\''+a.id+'\')'))+'">编辑</button>'
         +'<button class="btn sm" onclick="copyIEP(\''+a.id+'\')">复制 IEP</button>'
         +'<button class="btn sm" onclick="applyIEP(\''+a.id+'\')">写入计划</button>'
         +'<button class="btn sm dan" onclick="delAssess(\''+a.id+'\',this)">删除</button>'
@@ -4899,7 +4900,7 @@ function viewProtocolLib(){
     +'<h3>BCBA 评估方案库（10种障碍）</h3><span class="sp"></span>'
     +'<button class="btn sm" onclick="openAssessPics()">📷 图卡库</button>'
     +'</div><div class="card-b">';
-  h += '<div class="ass-intro">依据 10 份 BCBA 极致融合版参考文档，按障碍类型整理出「<strong>40 分钟动态评估流程</strong>（操作话术 + 观察点 + 同步干预）+ <strong>阶梯式干预阶段</strong> + <strong>0-6 岁年龄段对照表</strong>」。每张卡片可展开做课前准备，<strong>点「📝 开始评估」可边上课边按时间轴记录观察</strong>，保存为孩子的评估记录。</div>';
+  h += '<div class="ass-intro">依据 10 份 BCBA 极致融合版参考文档，按障碍类型整理出「<strong>40 分钟动态评估流程</strong>（操作话术 + 观察点 + 同步干预）+ <strong>阶梯式干预阶段</strong> + <strong>0-6 岁年龄段对照表</strong>」。点「📝 开始评估」可边上课边按时间轴<strong>点选 优势/一般/弱项（完成度）</strong>，保存后<strong>自动汇总优劣势并生成 IEP（治疗目标 + 治疗计划 + 家庭指导）</strong>。</div>';
   if(!list.length){
     h += '<div class="empty"><p>协议数据未加载</p></div>';
   } else {
@@ -4949,54 +4950,127 @@ function protocolCard(p){
   return h;
 }
 
-function openAssessWorksheet(key){
+/* ---------- BCBA 工作台评估 → 优劣势 + IEP 自动生成（点击评分即出计划） ---------- */
+function wsExtractTips(txt){
+  if(!txt) return [];
+  var parts = String(txt).split(/[。！？;；\n]+/);
+  var out=[], seen={};
+  parts.forEach(function(p){
+    p = p.replace(/^[\s、，,：:]+/,'').replace(/[\s、，,：:]+$/,'');
+    if(p.length>=4 && p.length<=42 && !seen[p]){ seen[p]=1; out.push(p); }
+  });
+  return out.slice(0, 4);
+}
+function wsBuildIEP(p, scores, notes){
+  var strengths=[], weak=[];
+  (p.flow||[]).forEach(function(f, i){
+    var sc = scores[i];
+    if(sc==='0') strengths.push({type:p.key, dom:p.key, probe:f.time+'（优势）'});
+    else if(sc==='2'){
+      var tips = wsExtractTips(f.intervene);
+      weak.push({type:p.key, dom:p.key, probe:f.time, note:(notes&&notes[i])||'', tips:tips});
+    }
+  });
+  var longGoals = (p.stages||[]).map(function(s, idx){ return '阶段'+(idx+1)+'：'+s.name; });
+  var strategies=[], seen={};
+  weak.forEach(function(w){ (w.tips||[]).forEach(function(t){ if(!seen[t]){ seen[t]=1; strategies.push(t); } }); });
+  (p.stages||[]).forEach(function(s){ if(s.content && !seen[s.content]){ seen[s.content]=1; strategies.push('（'+s.name+'）'+s.content); } });
+  var shortGoals = weak.map(function(w){
+    return '【'+w.type+'】'+w.probe+'：' + ((w.tips&&w.tips[0]) || '在该维度建立基础能力，逐步提升，设定可观测的小步子目标');
+  });
+  var homework = weak.map(function(w){
+    return '【'+w.type+'】'+w.probe+'：' + ((w.tips&&w.tips[1]) || '在日常生活中创设相关情境，每日 5-10 分钟自然练习，家长记录完成情况');
+  });
+  var measure = '每节课记录该维度达成率与正确率；每 4 周复盘一次，弱项目标达成率 ≥70% 即升入下一阶段；优势项转入日常泛化，不再单独训练。';
+  return {
+    sum: { strengths: strengths, weak: weak, weakDoms: {} },
+    iep: { longGoals: longGoals, shortGoals: shortGoals, strategies: strategies.slice(0,8), homework: homework, measure: measure }
+  };
+}
+function wsUpdateProg(){
+  try{
+    var n = (ASSESS_PROTOCOLS||[]).filter(function(x){ return x.key===__ws.key; })[0];
+    if(!n) return;
+    var total = (n.flow||[]).length, done=0;
+    for(var i=0;i<total;i++){ if(__ws.scores[i]==='0'||__ws.scores[i]==='1'||__ws.scores[i]==='2') done++; }
+    var el=document.getElementById('wsProg'); if(el) el.textContent='已评 '+done+' / '+total+' 段';
+  }catch(e){}
+}
+function wsToggleObs(i, tag, btn){
+  if(!__ws.obs) __ws.obs={};
+  var arr=__ws.obs[i]||[]; var k=arr.indexOf(tag);
+  if(k>=0) arr.splice(k,1); else arr.push(tag);
+  __ws.obs[i]=arr;
+  if(btn) btn.classList.toggle('on', k<0);
+}
+
+function openAssessWorksheet(key, recId){
   var p = (ASSESS_PROTOCOLS || []).filter(function(x){ return x.key === key; })[0];
   if(!p){ toast('方案不存在：'+key, 'err'); return; }
   var defKid = (KIDS[0] && KIDS[0].id) || '';
-  __ws = { key: key, kidId: defKid, date: TODAY, notes: {}, scores: {}, overall: '' };
+  var rec = recId ? assessById(recId) : null;
+  __ws = {
+    key: key,
+    kidId: rec ? (rec.kidId||defKid) : defKid,
+    date: rec ? (rec.date||TODAY) : TODAY,
+    notes: rec ? (rec.notes||{}) : {},
+    scores: rec ? (rec.scores||{}) : {},
+    obs: rec ? (rec.obs||{}) : {},
+    overall: rec ? (rec.overall||'') : '',
+    _recId: rec ? rec.id : null
+  };
   var body = '<div class="frow">'
     + '<div class="fg"><label>评估对象 <span class="req">*</span></label>'
     + '<select class="inp" id="wsKid" onchange="__ws.kidId=this.value">'
     + (KIDS.length
         ? ('<option value="">— 选择孩子 —</option>' + KIDS.map(function(k){
-            return '<option value="'+k.id+'"'+(k.id===defKid?' selected':'')+'>'+esc(k.name)+'</option>';
+            return '<option value="'+k.id+'"'+(k.id===__ws.kidId?' selected':'')+'>'+esc(k.name)+'</option>';
           }).join(''))
         : '<option value="">还没有建档的孩子</option>')
     + '</select></div>'
     + '<div class="fg"><label>评估日期</label>'
-    + '<input class="inp" type="date" id="wsDate" value="'+esc(TODAY)+'" onchange="__ws.date=this.value">'
-    + '</div></div>';
+    + '<input class="inp" type="date" id="wsDate" value="'+esc(__ws.date)+'" onchange="__ws.date=this.value">'
+    + '</div>'
+    + '<div class="fg" style="display:flex;align-items:center"><span id="wsProg" class="chip" style="margin:0">已评 0 / '+((p.flow||[]).length)+' 段</span></div>'
+    + '</div>';
   if(p.desc) body += '<div class="notice tip" style="margin:0 0 10px;font-size:12.5px;line-height:1.5"><div><b>核心心法（必读）：</b>'+esc((p.desc||'').slice(0,300))+'</div></div>';
   body += '<div class="ws-flow">';
   (p.flow || []).forEach(function(f, i){
     var opts = [{v:'',t:'未测'},{v:'0',t:'优势'},{v:'1',t:'一般'},{v:'2',t:'弱项'}];
     var radios = opts.map(function(o){
       var on = (String(__ws.scores[i] || '') === o.v);
-      return '<label class="ar'+(on?(' ar'+(o.v||'')):'')+'"><input type="radio" name="ws_'+i+'" '+(on?'checked':'')+' value="'+o.v+'" onchange="__ws.scores['+i+']=this.value">'+o.t+'</label>';
+      return '<label class="ar'+(on?(' ar'+(o.v||'')):'')+'"><input type="radio" name="ws_'+i+'" '+(on?'checked':'')+' value="'+o.v+'" onchange="__ws.scores['+i+']=this.value;wsUpdateProg()">'+o.t+'</label>';
+    }).join('');
+    var obsp = wsExtractTips(f.observe).map(function(tag){
+      var on = (__ws.obs[i]||[]).indexOf(tag)>=0;
+      return '<button type="button" class="chip'+(on?' on':'')+'" style="margin:3px 5px 3px 0" onclick="wsToggleObs('+i+',\''+tag.replace(/'/g,"\\'")+'\',this)">'+esc(tag)+'</button>';
     }).join('');
     body += '<div class="ws-row">'
       + '<div class="ws-t">⏱ '+esc(f.time)+'</div>'
       + '<div class="ws-c">'
       +   '<div class="ws-lbl">操作话术</div><div class="ws-txt">'+esc(f.steps)+'</div>'
-      +   '<div class="ws-lbl" style="margin-top:8px">多维度观察点</div><div class="ws-txt">'+esc(f.observe)+'</div>'
+      +   '<div class="ws-lbl" style="margin-top:8px">多维度观察点（点一下即记录，也可下方手打补充）</div>'
+      +   (obsp ? ('<div style="display:flex;flex-wrap:wrap;margin-top:4px">'+obsp+'</div>') : '<div class="ws-txt">'+esc(f.observe)+'</div>')
       +   '<div class="ws-lbl" style="margin-top:8px">同步干预</div><div class="ws-txt">'+esc(f.intervene)+'</div>'
       + '</div>'
-      + '<div class="ws-r" style="margin-top:8px"><div class="ws-lbl">📝 观察记录</div>'
-      +   '<textarea class="inp" rows="2" placeholder="本段实际表现…" oninput="__ws.notes['+i+']=this.value">'+esc(__ws.notes[i]||'')+'</textarea>'
+      + '<div class="ws-r" style="margin-top:8px"><div class="ws-lbl">📝 观察记录（选填）</div>'
+      +   '<textarea class="inp" rows="2" placeholder="本段实际表现（手打补充）…" oninput="__ws.notes['+i+']=this.value">'+esc(__ws.notes[i]||'')+'</textarea>'
       + '</div>'
-      + '<div class="ws-s" style="margin-top:8px"><div class="ws-lbl">评分（优势/一般/弱项）</div>'
+      + '<div class="ws-s" style="margin-top:8px"><div class="ws-lbl">评分（优势/一般/弱项 = 完成度）</div>'
       +   '<div class="arow" style="margin-top:4px">'+radios+'</div>'
       + '</div>'
       + '</div>';
   });
   body += '</div>';
-  body += '<div class="fg" style="margin-top:12px"><label>整体小结</label>'
+  body += '<div class="fg" style="margin-top:12px"><label>整体小结（选填）</label>'
     + '<textarea class="inp" rows="2" id="wsOverall" placeholder="整体印象、亲子关系、特别要注意的点…" oninput="__ws.overall=this.value">'+esc(__ws.overall)+'</textarea></div>';
-  showMo('开始评估 — '+esc(p.key), body,
+  var title = (rec ? '编辑评估 — ' : '开始评估 — ') + esc(p.key);
+  showMo(title, body,
     '<button class="btn" onclick="closeMo()">取消</button>'
     + '<button class="btn" onclick="openAssessPics()">📷 图卡</button>'
-    + '<button class="btn pri" onclick="saveWorksheetAssess()">保存为评估记录</button>',
+    + '<button class="btn pri" onclick="saveWorksheetAssess()">'+(rec?'更新评估记录':'保存为评估记录')+'</button>',
     'wide');
+  wsUpdateProg();
 }
 
 function saveWorksheetAssess(){
@@ -5007,33 +5081,44 @@ function saveWorksheetAssess(){
   if(!p){ toast('协议未找到','err'); return; }
   var overallEl = document.getElementById('wsOverall');
   if(overallEl) __ws.overall = overallEl.value || '';
+  var bi = wsBuildIEP(p, __ws.scores, __ws.notes);
   var L = ['【动态评估 - '+__ws.key+'】'];
   if(p.desc) L.push('核心心法：' + p.desc.slice(0,120));
   (p.flow || []).forEach(function(f, i){
     var sc = __ws.scores[i];
     var scLbl = sc==='0' ? '优势' : (sc==='1' ? '一般' : (sc==='2' ? '弱项' : '未测'));
     L.push('— [' + f.time + '] 评分：' + scLbl + ' —');
-    L.push(__ws.notes[i] || '（无记录）');
+    var line = __ws.notes[i] || '';
+    var ob = (__ws.obs && __ws.obs[i]) || [];
+    if(ob.length) line += (line ? '；' : '') + '观察点：' + ob.join('、');
+    L.push(line || '（无记录）');
   });
   if(__ws.overall) L.push('— 整体小结 —\n' + __ws.overall);
-  var rec = {
-    id: uid(),
-    kidId: kid.id,
-    kidName: kid.name,
-    date: __ws.date,
-    types: [__ws.key],
-    scored: {},
-    notes: {},
-    note: L.join('\n'),
-    iep: null,
-    source: 'worksheet'
-  };
-  ASSESS.push(rec);
+  L.push('');
+  L.push('【优劣势】优势 ' + bi.sum.strengths.length + ' / 待提升 ' + bi.sum.weak.length);
+  if(bi.sum.weak.length) L.push('待提升维度：' + bi.sum.weak.map(function(w){ return w.probe; }).join('；'));
+  L.push('【IEP 已自动生成】长期目标 ' + bi.iep.longGoals.length + ' · 短期目标 ' + bi.iep.shortGoals.length + ' · 策略 ' + bi.iep.strategies.length);
+  var rec = null, isUpdate = false;
+  if(__ws._recId){ rec = assessById(__ws._recId); if(!rec){ toast('原记录丢失，将新建','warn'); rec=null; } else { isUpdate = true; } }
+  if(rec){
+    rec.kidId = kid.id; rec.kidName = kid.name; rec.date = __ws.date;
+    rec.types = [__ws.key]; rec.scores = __ws.scores; rec.notes = __ws.notes;
+    rec.obs = __ws.obs || {}; rec.overall = __ws.overall;
+    rec.note = L.join('\n'); rec.wsSum = bi.sum; rec.iep = bi.iep;
+  } else {
+    rec = {
+      id: uid(), kidId: kid.id, kidName: kid.name, date: __ws.date,
+      types: [__ws.key], scored: {}, notes: __ws.notes, obs: __ws.obs || {},
+      scores: __ws.scores, overall: __ws.overall, note: L.join('\n'),
+      wsSum: bi.sum, iep: bi.iep, source: 'worksheet'
+    };
+    ASSESS.push(rec);
+  }
   if(!saveAll()){ toast('保存失败','err'); return; }
   __ws = null;
   closeMo();
   __assessTab = 'rec';
-  toast('已保存为评估记录','ok');
+  toast(isUpdate ? '已更新评估记录' : '已保存为评估记录', 'ok');
   render();
   setTimeout(function(){ openAssessView(rec.id); }, 220);
 }
@@ -5243,7 +5328,7 @@ function openAssessView(id){
     '<button class="btn" onclick="closeMo()">关闭</button>'+
     '<button class="btn" onclick="copyIEP(\''+id+'\')">复制 IEP</button>'+
     '<button class="btn" onclick="applyIEP(\''+id+'\')">写入下次计划</button>'+
-    '<button class="btn pri" onclick="closeMo();openAssessForm(\''+id+'\')">编辑</button>', 'wide');
+    '<button class="btn pri" onclick="closeMo();'+(a.source==='worksheet' ? ('openAssessWorksheet(\''+esc(a.types[0]).replace(/'/g,"\\'")+'\',\''+a.id+'\')') : ('openAssessForm(\''+a.id+'\')'))+'">编辑</button>', 'wide');
 }
 
 function iepBlock(title, arr){
@@ -6217,7 +6302,7 @@ var ASSESS_IMAGES={
 '公园':'<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="160" fill="#a8e6cf"/><rect x="0" y="160" width="200" height="40" fill="#27ae60"/><circle cx="160" cy="40" r="20" fill="#f4d03f"/><rect x="45" y="100" width="8" height="60" fill="#7b4a2a"/><circle cx="49" cy="80" r="40" fill="#2ecc71"/><circle cx="60" cy="70" r="12" fill="#27ae60" opacity=".5"/><rect x="120" y="120" width="50" height="6" fill="#7b4a2a"/><rect x="125" y="126" width="4" height="30" fill="#7b4a2a"/><rect x="161" y="126" width="4" height="30" fill="#7b4a2a"/><rect x="128" y="128" width="42" height="4" fill="#7b4a2a"/><circle cx="30" cy="170" r="8" fill="#e74c3c"/><circle cx="170" cy="172" r="7" fill="#f4d03f"/><circle cx="90" cy="175" r="6" fill="#9b59b6"/></svg>',
 '生日':'<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><rect x="60" y="100" width="80" height="60" fill="#f8b3ad"/><rect x="60" y="100" width="80" height="15" fill="#e74c3c"/><rect x="60" y="135" width="80" height="15" fill="#fff"/><path d="M70 100 Q90 80 110 100 Q130 80 130 100" fill="#f4d03f" stroke="#d4ac0d" stroke-width="2"/><line x1="80" y1="100" x2="80" y2="75" stroke="#222" stroke-width="3"/><line x1="100" y1="100" x2="100" y2="65" stroke="#222" stroke-width="3"/><line x1="120" y1="100" x2="120" y2="75" stroke="#222" stroke-width="3"/><path d="M80 75 Q82 68 80 65 Q84 68 82 75 Z" fill="#f39c12"/><path d="M100 65 Q103 56 100 52 Q106 56 104 65 Z" fill="#f39c12"/><path d="M120 75 Q122 68 120 65 Q125 68 122 75 Z" fill="#f39c12"/><text x="100" y="62" font-size="14" fill="#222" font-family="sans-serif" text-anchor="middle" font-weight="bold">★</text></svg>',
 };
-var APP_VER='2026.08.13-3';
+var APP_VER='2026.08.13-4';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
