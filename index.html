@@ -429,6 +429,7 @@ select.inp{-webkit-appearance:none;appearance:none;
 .entry-h strong{font-size:14.5px}
 .entry-h .sp{margin-left:auto}
 .entry-b{padding:13px}
+.goalbox{background:#f0fdfa;border:1px solid #99f6e4;border-radius:11px;padding:10px 11px 2px;margin-bottom:12px}
 .stpick{display:flex;gap:6px;flex-wrap:wrap}
 .stpick button{padding:6px 12px;border-radius:8px;border:1.5px solid var(--border-s);font-size:13px;font-weight:650;
   color:var(--muted);background:#fff;min-height:40px}
@@ -3734,7 +3735,7 @@ function openSession(sid, presetKid, presetDate){
   _sf.q=''; _sf.showAll=false;
   drawSessionForm();
 }
-function blankEntry(){ return {status:'done',content:'',perf:'',coop:'',hw:'',reason:'',nextPlan:'',promote:false}; }
+function blankEntry(){ return {status:'done',content:'',perf:'',coop:'',hw:'',reason:'',nextPlan:'',promote:false,lg:'',sg:''}; }
 
 function drawSessionForm(){
   var maxN = _sf.format==='一对一'?1:(_sf.format==='一对二'?2:8);
@@ -3805,8 +3806,14 @@ function entryBlock(id,idx){
         ? '<div class="fg"><label>'+(e.status==='leave'?'请假原因':'旷课备注')+'</label>'+
           '<input class="inp" value="'+esc(e.reason)+'" oninput="_sf.entries[\''+id+'\'].reason=this.value" placeholder="如：感冒发烧、临时出差、未提前告知">'+
           '<div class="hint">'+(e.status==='leave'?'请假默认不消耗课时':'旷课不消耗课时，如需扣课请在档案里手动调整累计购买课时')+'</div></div>'
-        : '<div class="fg"><label>本节课内容'+aiBtnHTML('本节课内容',id)+'</label>'+
+        :           '<div class="fg"><label>本节课内容'+aiBtnHTML('本节课内容',id)+'</label>'+
             '<textarea class="inp" rows="2" oninput="_sf.entries[\''+id+'\'].content=this.value" placeholder="训练目标、使用教具、活动流程……">'+esc(e.content)+'</textarea></div>'+
+          '<div class="goalbox">'+
+          '<div class="fg"><label>🎯 长期目标（可点 AI 生成 / 从评估带入）'+aiBtnHTML('IEP长期目标',id)+'</label>'+
+            '<textarea class="inp" rows="2" oninput="_sf.entries[\''+id+'\'].lg=this.value" placeholder="如：阶段1 建立共同注意与目光接触……">'+esc(e.lg||'')+'</textarea></div>'+
+          '<div class="fg"><label>🎯 短期目标 SMART'+aiBtnHTML('IEP短期目标',id)+'</label>'+
+            '<textarea class="inp" rows="2" oninput="_sf.entries[\''+id+'\'].sg=this.value" placeholder="如：在提示下能命名 3 种水果……">'+esc(e.sg||'')+'</textarea></div>'+
+          '</div>'+
           '<div class="fg"><label>孩子表现'+aiBtnHTML('孩子表现',id)+'</label>'+
             '<textarea class="inp" rows="2" oninput="_sf.entries[\''+id+'\'].perf=this.value" placeholder="正确率、注意力时长、情绪状态、需辅助的环节……">'+esc(e.perf)+'</textarea></div>'+
           '<div class="fg"><label>配合程度</label>'+
@@ -3936,7 +3943,8 @@ function saveSession(){
   _sf.kidIds.forEach(function(id){
     var e=_sf.entries[id];
     rec.entries[id]={ status:e.status, content:e.content||'', perf:e.perf||'',
-                      coop:e.coop||'', hw:e.hw||'', reason:e.reason||'', nextPlan:e.nextPlan||'' };
+                      coop:e.coop||'', hw:e.hw||'', reason:e.reason||'', nextPlan:e.nextPlan||'',
+                      lg:e.lg||'', sg:e.sg||'' };
     /* 升级为阶段计划 */
     if(e.promote && (e.nextPlan||'').trim()){
       PLANS.forEach(function(p){
@@ -4884,7 +4892,7 @@ function viewAssessRecords(){
         +'<button class="btn sm" onclick="openAssessView(\''+a.id+'\')">查看</button>'
         +'<button class="btn sm" onclick="'+(a.source==='worksheet' ? ('openAssessWorksheet(\''+esc(a.types[0]).replace(/'/g,"\\'")+'\',\''+a.id+'\')') : ('openAssessForm(\''+a.id+'\')'))+'">编辑</button>'
         +'<button class="btn sm" onclick="copyIEP(\''+a.id+'\')">复制 IEP</button>'
-        +'<button class="btn sm" onclick="applyIEP(\''+a.id+'\')">写入计划</button>'
+        +'<button class="btn sm" onclick="applyIEP(\''+a.id+'\')">写入治疗记录</button>'
         +'<button class="btn sm dan" onclick="delAssess(\''+a.id+'\',this)">删除</button>'
         +'</div></div>';
     }).join('')+'</div>';
@@ -5327,7 +5335,7 @@ function openAssessView(id){
   showMo('评估详情', b,
     '<button class="btn" onclick="closeMo()">关闭</button>'+
     '<button class="btn" onclick="copyIEP(\''+id+'\')">复制 IEP</button>'+
-    '<button class="btn" onclick="applyIEP(\''+id+'\')">写入下次计划</button>'+
+    '<button class="btn pri" onclick="applyIEP(\''+id+'\')">写入治疗记录</button>'+
     '<button class="btn pri" onclick="closeMo();'+(a.source==='worksheet' ? ('openAssessWorksheet(\''+esc(a.types[0]).replace(/'/g,"\\'")+'\',\''+a.id+'\')') : ('openAssessForm(\''+a.id+'\')'))+'">编辑</button>', 'wide');
 }
 
@@ -5339,12 +5347,17 @@ function iepBlock(title, arr){
 
 function applyIEP(aid){
   var a=assessById(aid); if(!a) return;
-  if(!kidById(a.kidId)){ toast('该孩子档案已删除，无法写入计划','err'); return; }
+  if(!kidById(a.kidId)){ toast('该孩子档案已删除，无法写入治疗记录','err'); return; }
   openSession(null, a.kidId, TODAY);
   if(_sf.kidIds.length){
-    _sf.entries[_sf.kidIds[0]].nextPlan = formatIEPText(a);
+    var sum=assessSummary(a);
+    var iep = a.iep || (sum && sum.iep) || buildIEP(a, sum);
+    var e=_sf.entries[_sf.kidIds[0]];
+    e.lg = (iep.longGoals||[]).join('\n');
+    e.sg = (iep.shortGoals||[]).join('\n');
+    e.nextPlan = [].concat(iep.strategies||[], iep.homework||[], iep.measure?['评量：'+iep.measure]:[]).join('\n');
     drawSessionForm();
-    toast('已把 IEP 写入「下一步计划」，可再调整','ok');
+    toast('已把 IEP 的长期/短期目标带入治疗记录，可再调整','ok');
   }
 }
 
@@ -5748,7 +5761,7 @@ function buildReportHTML(from,to,withArc){
     detail+='<div class="rpt-empty" style="padding:14px;color:#94a3b8">本区间（'+esc(from)+' 至 '+esc(to)+'）没有治疗记录。</div>';
   }else{
     detail+='<table class="rpt-tb"><thead><tr>'+
-      '<th>日期</th><th>时间</th><th>形式</th><th>儿童</th><th>治疗内容</th><th>课堂表现</th><th>配合程度</th><th>家庭指导</th><th>考勤</th><th>缴费确认</th>'+
+      '<th>日期</th><th>时间</th><th>形式</th><th>儿童</th><th>治疗内容</th><th>课堂表现</th><th>配合程度</th><th>家庭指导</th><th>长期目标</th><th>短期目标</th><th>考勤</th><th>缴费确认</th>'+
       '</tr></thead><tbody>';
     sess.forEach(function(s){
       s.kidIds.forEach(function(id){
@@ -5765,6 +5778,8 @@ function buildReportHTML(from,to,withArc){
           '<td class="rpt-mult">'+esc(e.perf||'')+'</td>'+
           '<td>'+esc(e.coop||'')+'</td>'+
           '<td class="rpt-mult">'+esc(e.hw||'')+'</td>'+
+          '<td class="rpt-mult">'+esc(e.lg||'')+'</td>'+
+          '<td class="rpt-mult">'+esc(e.sg||'')+'</td>'+
           '<td>'+esc(ST_LABEL[e.status]||'—')+'</td>'+
           '<td>'+esc(payTxt)+'</td>'+
         '</tr>';
@@ -6302,7 +6317,7 @@ var ASSESS_IMAGES={
 '公园':'<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="160" fill="#a8e6cf"/><rect x="0" y="160" width="200" height="40" fill="#27ae60"/><circle cx="160" cy="40" r="20" fill="#f4d03f"/><rect x="45" y="100" width="8" height="60" fill="#7b4a2a"/><circle cx="49" cy="80" r="40" fill="#2ecc71"/><circle cx="60" cy="70" r="12" fill="#27ae60" opacity=".5"/><rect x="120" y="120" width="50" height="6" fill="#7b4a2a"/><rect x="125" y="126" width="4" height="30" fill="#7b4a2a"/><rect x="161" y="126" width="4" height="30" fill="#7b4a2a"/><rect x="128" y="128" width="42" height="4" fill="#7b4a2a"/><circle cx="30" cy="170" r="8" fill="#e74c3c"/><circle cx="170" cy="172" r="7" fill="#f4d03f"/><circle cx="90" cy="175" r="6" fill="#9b59b6"/></svg>',
 '生日':'<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><rect x="60" y="100" width="80" height="60" fill="#f8b3ad"/><rect x="60" y="100" width="80" height="15" fill="#e74c3c"/><rect x="60" y="135" width="80" height="15" fill="#fff"/><path d="M70 100 Q90 80 110 100 Q130 80 130 100" fill="#f4d03f" stroke="#d4ac0d" stroke-width="2"/><line x1="80" y1="100" x2="80" y2="75" stroke="#222" stroke-width="3"/><line x1="100" y1="100" x2="100" y2="65" stroke="#222" stroke-width="3"/><line x1="120" y1="100" x2="120" y2="75" stroke="#222" stroke-width="3"/><path d="M80 75 Q82 68 80 65 Q84 68 82 75 Z" fill="#f39c12"/><path d="M100 65 Q103 56 100 52 Q106 56 104 65 Z" fill="#f39c12"/><path d="M120 75 Q122 68 120 65 Q125 68 122 75 Z" fill="#f39c12"/><text x="100" y="62" font-size="14" fill="#222" font-family="sans-serif" text-anchor="middle" font-weight="bold">★</text></svg>',
 };
-var APP_VER='2026.08.13-4';
+var APP_VER='2026.08.13-5';
 
 /* 行为检测 flex gap：不靠 CSSOM，直接量两个空 div 的间距 */
 function flexGapSupported(){
